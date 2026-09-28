@@ -1,0 +1,14 @@
+# Bake-off candidate. Mandatory query prefix from the model card; none for documents. Remote code (NomicBert).
+name: coderankembed
+models:
+  - id: nomic-ai/CodeRankEmbed
+    revision: 3c4b60807d71f79b43f3c4363786d9493691f8b1
+    query_prompt: "Represent this query for searching relevant code: "
+    doc_prompt: ""
+    max_seq_length: 8192
+    trust_remote_code: true
+fusion_weights: [1.0]
+device: cpu
+batch_size: 8
+query_pre: {normalize_ws: false, strip_latex_dollar: false}
+doc_pre: {normalize_ws: false}

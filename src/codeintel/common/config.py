@@ -50,6 +50,7 @@ class Stage1Cfg:
     device: str = "cpu"
     batch_size: int = 16
     fp16_on_cuda: bool = True
+    attn_budget: int = 8192**2  # max batch_size * seq_len^2 per encode batch (GPU memory; no effect on vectors)
     query_pre: QueryPreCfg = field(default_factory=QueryPreCfg)
     doc_pre: DocPreCfg = field(default_factory=DocPreCfg)
     cache_dir: str = "cache/embeddings"

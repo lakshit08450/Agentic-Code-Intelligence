@@ -35,23 +35,26 @@ def load_texts(target: str) -> list[str]:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--config", required=True)
+    ap.add_argument("--config", required=True, nargs="+", help="one or more configs, encoded in order")
     ap.add_argument("--device", default=None, help="cuda|cpu (overrides config)")
     ap.add_argument("--targets", default="corpus,queries")
     ap.add_argument("--limit", type=int, default=None, help="encode only the first N texts per target (smoke test)")
     ap.add_argument("--chunk", type=int, default=512, help="texts per cache chunk file")
     args = ap.parse_args()
 
-    cfg = load_cfg(args.config, device=args.device)
+    texts_by_target = {t: load_texts(t)[: args.limit] for t in args.targets.split(",")}
+    for cfg_path in args.config:
+        encode_config(cfg_path, args.device, texts_by_target, args.chunk)
+
+
+def encode_config(cfg_path: str, device: str | None, texts_by_target: dict[str, list[str]], chunk: int) -> None:
+    cfg = load_cfg(cfg_path, device=device)
     enc = PrePostPipelineEncoder(cfg)
-    for target in args.targets.split(","):
-        texts = load_texts(target)
-        if args.limit:
-            texts = texts[: args.limit]
+    for target, texts in texts_by_target.items():
         is_query = target == "queries"
         for i, m in enumerate(cfg.models):
             t0 = time.perf_counter()
-            n = enc.fill_cache(texts, is_query, i, chunk=args.chunk, progress=True)
+            n = enc.fill_cache(texts, is_query, i, chunk=chunk, progress=True)
             dt = time.perf_counter() - t0
             rate = f"{n / dt:.1f} texts/s" if n else "all cached"
             log.info(
