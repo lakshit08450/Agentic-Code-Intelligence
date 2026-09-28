@@ -1,0 +1,14 @@
+mteb>=2.2.0
+sentence-transformers
+transformers>=4.48
+torch
+datasets
+numpy
+pyyaml
+psutil
+
+[:sys_platform == "win32"]
+pywin32
+
+[dev]
+pytest

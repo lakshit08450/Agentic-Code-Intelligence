@@ -1,0 +1,13 @@
+# G1 harness check only (plan Section 9). Prompts and length copied from mteb's registry entry.
+name: e5-base-v2
+models:
+  - id: intfloat/e5-base-v2
+    revision: 1c644c92ad3ba1efdad3f1451a637716616a20e8
+    query_prompt: "query: "
+    doc_prompt: "passage: "
+    max_seq_length: 512
+fusion_weights: [1.0]
+device: cpu
+batch_size: 64
+query_pre: {normalize_ws: false, strip_latex_dollar: false}
+doc_pre: {normalize_ws: false}

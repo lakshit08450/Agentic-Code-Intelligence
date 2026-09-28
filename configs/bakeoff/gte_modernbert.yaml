@@ -1,0 +1,13 @@
+# Output A v0 and G1 reference model. No prompts (model card / mteb registry). Raw text, no preprocessing.
+name: gte-modernbert-base
+models:
+  - id: Alibaba-NLP/gte-modernbert-base
+    revision: 7ca8b4ca700621b67618669f5378fe5f5820b8e4
+    query_prompt: ""
+    doc_prompt: ""
+    max_seq_length: 8192
+fusion_weights: [1.0]
+device: cpu
+batch_size: 8
+query_pre: {normalize_ws: false, strip_latex_dollar: false}
+doc_pre: {normalize_ws: false}
