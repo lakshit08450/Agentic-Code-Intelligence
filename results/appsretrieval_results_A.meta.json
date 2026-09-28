@@ -1,0 +1,26 @@
+{
+  "config": "configs\\bakeoff\\gte_modernbert.yaml",
+  "config_name": "gte-modernbert-base",
+  "git_commit": "8706ac52a91896e392c93fa242af46026f8f1ea6",
+  "device_for_misses": "cpu",
+  "cache_stats": {
+    "hits": 12519,
+    "misses": 0
+  },
+  "elapsed_s": 33.9,
+  "hardware": {
+    "os": "Windows-10-10.0.26200-SP0",
+    "cpu": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
+    "cores_physical": 8,
+    "cores_logical": 16,
+    "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "torch": "2.11.0+cu128",
+    "mteb": "2.21.8"
+  },
+  "headline": {
+    "ndcg_at_10": 0.57738,
+    "mrr_at_10": 0.5296573494382248,
+    "recall_at_10": 0.72961,
+    "recall_at_100": 0.91873
+  }
+}

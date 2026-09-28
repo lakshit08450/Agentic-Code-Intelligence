@@ -71,3 +71,23 @@ Changes:
 - `tests/test_no_console_windows.py` (AST scan): no direct `subprocess.run/Popen/call/check_*`, `os.system`, `os.startfile`, `DETACHED_PROCESS`, or `start` / `cmd /c start` launches anywhere in `src/` or `scripts/`; the detector is itself tested on a bad snippet. Suite: 10 passed.
 Procedure: stopped the running gte encode with `bg.py --stop logs/encode_gte.log` → "pid 27860 STOPPED (3 processes, 0 force-killed)"; no partial `.tmp` chunk left; corpus (18 chunks) kept. Restarted with the fixed `bg.py`; it resumed (corpus all cached, 8,253 queries remaining).
 Verification: a watcher (EnumWindows snapshot diff over all processes, 0.25 s polling, 90 s) during the restarted job reported **0 new visible top-level windows**; job tree = venv `python.exe` → base `python.exe` + hidden `conhost.exe`.
+
+## 2026-09-29 Phase 0.5/0.6: G1 part 2 and Output A v0 (plan-listed test run #2)
+
+### gte-modernbert-base encode (GPU)
+Command: `.venv/Scripts/python scripts/bg.py logs/encode_gte.log -- .venv/Scripts/python scripts/encode.py --config configs/bakeoff/gte_modernbert.yaml --device cuda`
+Config: `configs/bakeoff/gte_modernbert.yaml` (rev e7f32e3c, max_seq_length 8192, no prompts); commits f7dadda → 8706ac5 (stopped and resumed for the window fix); RTX 5060, fp16.
+- Corpus: 8,754 unique texts in 136.6 s = 64.1 texts/s. Queries: 8,253 in 134.9 s = 61.2 texts/s (512 embedded before the stop).
+
+### Output A v0 = G1 part 2
+Command: `.venv/Scripts/python scripts/bg.py logs/outputA_v0.log -- .venv/Scripts/python -m codeintel.eval.run_mteb --config configs/bakeoff/gte_modernbert.yaml --require-cache --out results/appsretrieval_results_A.json --prediction-folder results/predictions/stage1`
+Config: `configs/bakeoff/gte_modernbert.yaml`; commit 8706ac5; CPU (Ryzen 9 270), all vectors from cache (12,519 hits, 0 misses); wall 33.9 s; mteb 2.21.8, dataset rev f22508f9.
+- **ndcg_at_10 = 0.57738** (reference 56.4 x100 → **G1 part 2 PASS**, +1.3 points). mrr_at_10 = 0.52966, mrr_at_1000 = 0.53785, ndcg_at_1 = recall_at_1 = 0.44223, recall_at_10 = 0.72961, recall_at_20 = 0.79734, recall_at_100 = 0.91873.
+- The +1.3-point gap to the published figure is not investigated on test (R2/R3). Plausible causes: different model revision, full 8,192-token queries vs a shorter cap in the papers. Validation numbers in Phase 1 will set our own baseline.
+- Files: `results/appsretrieval_results_A.json` (MTEB `TaskResult.to_disk`), `results/appsretrieval_results_A.meta.json` (config, commit, hardware, cache stats). First-stage predictions `results/predictions/stage1/AppsRetrieval_predictions.json` (108 MB, top-1000 per query) kept locally for Output B, gitignored (over GitHub's 100 MB file limit).
+- This is the fallback submission. Per P: no GitHub remote or release yet; commit locally only.
+
+**G1: PASS** (e5-base-v2 0.11532 vs 0.115; gte-modernbert-base 0.57738 vs 0.564).
+
+## Notes for Stage 2 error analysis (Phase 2b)
+- The corpus contains 11 exact duplicate documents (8,754 unique texts among 8,765). Per P, they stay in the corpus. Identical texts get identical embeddings and identical execution outcomes, so a duplicate of the gold solution ties with it at every stage; the final order is then decided by mteb's tie-break (doc id), which we do not control. Count how many validation misses at rank 1 involve an exact-duplicate text when doing the Section 13 error analysis.
