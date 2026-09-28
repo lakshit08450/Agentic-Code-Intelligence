@@ -13,12 +13,12 @@ import argparse
 import json
 import logging
 import platform
-import subprocess
 import time
 from pathlib import Path
 
 import mteb
 
+from codeintel.common import proc
 from codeintel.common.config import REPO_ROOT, load_cfg
 from codeintel.stage1.encoder import PrePostPipelineEncoder
 
@@ -65,6 +65,7 @@ def main() -> None:
         encode_kwargs={"batch_size": args.batch_size},
         prediction_folder=args.prediction_folder,
         co2_tracker=False,
+        num_proc=1,  # DataLoader num_workers=0: no worker processes (plan Section 8)
     )
     elapsed = time.perf_counter() - t0
 
@@ -74,7 +75,7 @@ def main() -> None:
     task_result.to_disk(out)
 
     scores = task_result.scores["test"][0]
-    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, capture_output=True, text=True).stdout.strip()
+    commit = proc.run(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, capture_output=True, text=True).stdout.strip()
     meta = {
         "config": cfg.source_path,
         "config_name": cfg.name,

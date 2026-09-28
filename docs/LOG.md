@@ -40,3 +40,34 @@ Files read: `mteb/models/abs_encoder.py`, `mteb/models/models_protocols.py`, `mt
 11. **Other**: `evaluate()` sets `encode_kwargs["batch_size"]=32` if absent; `num_proc` defaults to 1.
 
 Plan adaptations: none needed to the rules. The encoder follows the plan skeleton; Output B uses `convert_to_reranking`.
+
+## 2026-09-29 Phase 0.4: encodes and G1 (part 1)
+
+### e5-base-v2 encode (GPU)
+Command: `.venv/Scripts/python scripts/bg.py logs/encode_e5.log -- .venv/Scripts/python scripts/encode.py --config configs/bakeoff/e5_base_v2.yaml --device cuda`
+Config: `configs/bakeoff/e5_base_v2.yaml`; commit b37f852; RTX 5060, fp16.
+- Corpus: 8,765 texts, 8,690 embedded (64 from an earlier smoke run) in 43.2 s = 201 texts/s. Queries: 8,701 embedded in 51.5 s = 169 texts/s.
+- Finding: the corpus has **8,754 unique texts among 8,765 documents** (11 exact duplicates after mteb's `strip()`). Relevant to the duplication risk in Section 4.
+
+### G1, e5-base-v2 on test (plan-listed test run #1)
+Command: `.venv/Scripts/python scripts/bg.py logs/g1_e5.log -- .venv/Scripts/python -m codeintel.eval.run_mteb --config configs/bakeoff/e5_base_v2.yaml --require-cache --out results/g1_e5_base_v2.json`
+Config: `configs/bakeoff/e5_base_v2.yaml`; commit f7dadda; CPU (Ryzen 9 270), all vectors from cache.
+- **ndcg_at_10 = 0.11532** (reference 11.5 x100: **G1 part 1 PASS**). mrr_at_10 = 0.09882, recall_at_10 = 0.16946, recall_at_100 = 0.34369.
+- Cache: 12,519 hits, 0 misses (`--require-cache`). Wall time 35.5 s.
+- VERIFY resolved (Section 4): mteb standardised 8,765 corpus documents for the test split, so the test corpus is the full corpus with train solutions as distractors.
+
+### gte-modernbert-base revision pin
+- The revision in mteb's registry, `7ca8b4ca700621b67618669f5378fe5f5820b8e4`, does not exist on the Hub (`config.json` → 404, not among the repo commits). Pinned to current main `e7f32e3c00f91d699e8c43b53106206bcc72bb22` (2025-07-04; weights unchanged since the 2025-01-22 safetensors commit; includes the upstream "patch inference on CPU & Windows" commit).
+
+## 2026-09-29 Fix: console windows popping up (plan Section 8 updated by P)
+
+Symptom (reported by P): new terminal windows kept opening while jobs ran.
+Cause: `scripts/bg.py` launched jobs with `DETACHED_PROCESS`. A detached process has no console, so every console child it starts (git from `_git_rev`, pip, DataLoader workers, later sandbox runs) allocates its own visible console window. (`CREATE_NO_WINDOW` is ignored when combined with `DETACHED_PROCESS`.)
+Changes:
+- New `src/codeintel/common/proc.py`: the only place that starts subprocesses. `run()` / `popen()` always add `CREATE_NO_WINDOW` on Windows; `popen(background=True)` uses `CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP`. `DETACHED_PROCESS` is never used.
+- `scripts/bg.py` launches through `proc.popen(background=True)`; new `--stop <log>` terminates the job's process tree from the `.pid` file (terminate, wait 15 s, then kill).
+- `encoder._git_rev` and `run_mteb` use `proc.run`.
+- DataLoader workers: `run_mteb` passes `num_proc=1` to `mteb.evaluate`, so mteb's `create_dataloader` uses `num_workers=0` (it only sets workers when `num_proc > 1`). sentence-transformers `encode` does not use a DataLoader.
+- `tests/test_no_console_windows.py` (AST scan): no direct `subprocess.run/Popen/call/check_*`, `os.system`, `os.startfile`, `DETACHED_PROCESS`, or `start` / `cmd /c start` launches anywhere in `src/` or `scripts/`; the detector is itself tested on a bad snippet. Suite: 10 passed.
+Procedure: stopped the running gte encode with `bg.py --stop logs/encode_gte.log` → "pid 27860 STOPPED (3 processes, 0 force-killed)"; no partial `.tmp` chunk left; corpus (18 chunks) kept. Restarted with the fixed `bg.py`; it resumed (corpus all cached, 8,253 queries remaining).
+Verification: a watcher (EnumWindows snapshot diff over all processes, 0.25 s polling, 90 s) during the restarted job reported **0 new visible top-level windows**; job tree = venv `python.exe` → base `python.exe` + hidden `conhost.exe`.

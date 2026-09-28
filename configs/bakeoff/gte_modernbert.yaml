@@ -2,7 +2,7 @@
 name: gte-modernbert-base
 models:
   - id: Alibaba-NLP/gte-modernbert-base
-    revision: 7ca8b4ca700621b67618669f5378fe5f5820b8e4
+    revision: e7f32e3c00f91d699e8c43b53106206bcc72bb22  # mteb registry pin 7ca8b4c does not exist on the Hub
     query_prompt: ""
     doc_prompt: ""
     max_seq_length: 8192

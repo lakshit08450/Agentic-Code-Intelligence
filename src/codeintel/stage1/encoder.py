@@ -17,6 +17,7 @@ from mteb.models.abs_encoder import AbsEncoder
 from mteb.models.model_meta import ModelMeta, ScoringFunction
 from mteb.types import PromptType
 
+from codeintel.common import proc
 from codeintel.common.cache import EmbeddingStore
 from codeintel.common.config import REPO_ROOT, ModelCfg, Stage1Cfg, load_cfg
 from codeintel.stage1.doc_pre import build_doc_pre
@@ -63,9 +64,7 @@ class SentenceTransformerBackend:
 
 def _git_rev() -> str:
     try:
-        out = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"], cwd=REPO_ROOT, capture_output=True, text=True, check=True
-        )
+        out = proc.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO_ROOT, capture_output=True, text=True, check=True)
         return out.stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         return "nogit"
