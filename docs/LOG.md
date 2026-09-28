@@ -241,3 +241,7 @@ Gold run after the fixes (`logs/gold_v3_newparser.log`, `results/gold_outcomes_v
 ### True call-based share
 - By the gold solution's own form (`program_mode`: defines functions / `class Solution`, never reads stdin): **606 / 1,000 = 60.6%** of validation queries (456 whose statement the parser also marks call_based, 138 with no recognised examples, 12 other).
 - That is above P's 25% threshold, so the call-based harness is built (step 5).
+
+## Step 6 depth decision (01:48)
+- Measured throughput 4.08 effective runs/s (12 workers). Estimated work: stdin part 344 queries x k x ~1.05 runs; call-based part ~600 queries x k x 1 run (one process per program running all examples). top-100 total ~96k runs = ~6.5 h -> cannot finish by 07:00 (harness still to be built). **Decision: top-50** (also the largest k in the Section 11.5 grid).
+- Order: stdin part now (Qwen3 validation candidates, `cache/stage1/qwen3-embedding-0.6b_val_top100.npz`, first 50); build the call-based harness meanwhile without running sandbox tests under load; run the full sandbox suite on an idle CPU before any harness run; then re-run the same top-50 job (stdin pairs are cache hits) to add call-based pairs.
