@@ -174,3 +174,10 @@ Command: `python -m codeintel.eval.ceiling bench --model gte-modernbert-base --r
 - Config: `configs/bakeoff/qwen3_0p6b.yaml` exactly as used in the bake-off (card query format with the plan's instruction, no doc prompt, 8,192-token cap, raw text). No change was made to it after seeing validation numbers.
 - Command: `python -m codeintel.eval.run_mteb --config configs/bakeoff/qwen3_0p6b.yaml --require-cache --out results/test_qwen3_zeroshot.json` (no prediction folder; CPU, vectors from the GPU-filled cache).
 - Decision rule (P's): Stage 1 = Qwen3 if its test ndcg_at_10 > 0.57738 (gte-modernbert G1) AND the projected full CPU test run is under 8 h (projected 1 h 50 min, measured before this run); otherwise keep gte-modernbert. No other test runs of any kind.
+
+## Step 3 RESULT: Qwen3-Embedding-0.6B zero-shot on test (test run #3)
+Command as pre-declared; commit 4973978; CPU (Ryzen 9 270), cache 12,519 hits / 0 misses; 25.1 s. Files `results/test_qwen3_zeroshot.json` (+ `.meta.json`).
+- **ndcg_at_10 = 0.74641**, mrr_at_10 = 0.70044, mrr_at_1000 = 0.70495, ndcg_at_1 = recall_at_1 = 0.60531, recall_at_10 = 0.89031, recall_at_20 = 0.93493, recall_at_100 = 0.98380.
+- Rule check: 0.74641 > 0.57738 (gte-modernbert) and projected CPU full run 1 h 50 min < 8 h. **Decision: Stage 1 model = Qwen3-Embedding-0.6B** (config `configs/bakeoff/qwen3_0p6b.yaml`, unchanged).
+- Val to test: 0.8344 -> 0.7464 (ratio 1.12, smallest of the three measured models).
+- No further test runs tonight. Output A JSON (`results/appsretrieval_results_A.json`) still holds the gte-modernbert v0 run; regenerating Output A with Qwen3 is a Phase 4 action (frozen config), not done tonight.
