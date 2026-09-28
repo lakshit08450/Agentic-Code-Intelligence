@@ -6,6 +6,7 @@ non-passing one; PASS needs every sample to pass. Only texts are used (R1).
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -28,7 +29,24 @@ def samples_for(statement: str) -> Samples:
     return parse(statement)
 
 
+_READS_STDIN = re.compile(r"\binput\s*\(|sys\.stdin|open\(\s*0\s*[,)]|os\.read\(\s*0|\bstdin\b")
+_DEFINES_CALLABLE = re.compile(r"^class\s+Solution\b|^def\s+[A-Za-z_]\w*\s*\(", re.M)
+
+
+def program_mode(program: str) -> str:
+    """'stdin' if the program reads standard input, 'call' if it only defines functions/classes.
+
+    Reads only the candidate's text (R1). Used to route LeetCode/Codewars solutions to the
+    call-based path even when the statement also contains Input/Output blocks.
+    """
+    if _READS_STDIN.search(program):
+        return "stdin"
+    return "call" if _DEFINES_CALLABLE.search(program) else "stdin"
+
+
 def verify(statement: str, program: str, cache: ExecCache | None, case_insensitive: bool = False) -> Verdict:
+    if program_mode(program) == "call":
+        return Verdict("UNKNOWN", "call_program", 0)
     s = samples_for(statement)
     if s.kind != "stdin":
         return Verdict("UNKNOWN", {"none": "no_samples"}.get(s.kind, s.kind), 0)

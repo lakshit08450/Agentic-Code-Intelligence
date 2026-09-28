@@ -181,3 +181,63 @@ Command as pre-declared; commit 4973978; CPU (Ryzen 9 270), cache 12,519 hits / 
 - Rule check: 0.74641 > 0.57738 (gte-modernbert) and projected CPU full run 1 h 50 min < 8 h. **Decision: Stage 1 model = Qwen3-Embedding-0.6B** (config `configs/bakeoff/qwen3_0p6b.yaml`, unchanged).
 - Val to test: 0.8344 -> 0.7464 (ratio 1.12, smallest of the three measured models).
 - No further test runs tonight. Output A JSON (`results/appsretrieval_results_A.json`) still holds the gte-modernbert v0 run; regenerating Output A with Qwen3 is a Phase 4 action (frozen config), not done tonight.
+
+## Step 4: gold failures, parser fixes, true call-based share
+
+### Gold run with the fixed sandbox and the OLD parser (sandbox v3)
+Command: `python -m codeintel.eval.ceiling gold --workers 12` (log `logs/gold_v3_oldparser.log`, `results/gold_outcomes_v3_oldparser.json`), commit 35441e6. 114 s.
+- PASS 246, WRONG 58, ERROR 22, UNKNOWN 674 (call_based 476, no_samples 177, parse_failure 11, py2_syntax 7, nonstdlib 3). PASS among statements with parsed stdin samples: 246/336 = **73.2%**. No TIMEOUTs (all 122 in v0 were the timer artefact).
+
+### 20 gold failures and causes (first 20 WRONG/ERROR by query id, from the run above)
+| # | query | outcome | cause | category |
+|---|---|---|---|---|
+| 1 | q1103 | ERROR ValueError int('') | blank lines inside the CodeChef sample input (`2\n\n5\n\n72`) | B blank lines |
+| 2 | q1107 | WRONG | expected output includes author credits ("By: Chintan, ...") | A prose in output |
+| 3 | q1140 | ERROR IndexError | blank lines in input + "Explanation:" in expected output | A + B |
+| 4 | q1163 | WRONG | gold prints `4.0` where `0` expected (gold bug) + explanation in output | E gold wrong |
+| 5 | q1245 | ERROR unpack | blank lines inside the sample input | B |
+| 6 | q1289 | WRONG | "Explanation" paragraph in expected output | A |
+| 7 | q1379 | WRONG | "Explanation" line directly after the output (no blank line) | A |
+| 8 | q1432 | ERROR ValueError | blank lines inside the sample input | B |
+| 9 | q1443 | ERROR ValueError | blank lines inside the sample input | B |
+| 10 | q1499 | ERROR unpack | blank lines inside the sample input | B |
+| 11 | q1505 | WRONG (no output) | gold prints nothing on the parsed input | E / unclear |
+| 12 | q1524 | WRONG | "(Explanation: 10+3+7+3)" appended to expected output | A |
+| 13 | q1538 | ERROR ValueError | blank lines inside the sample input | B |
+| 14 | q1562 | WRONG | several valid outputs (any valid construction accepted) | C multiple answers |
+| 15 | q1601 | ERROR ValueError | blank lines inside the sample input | B |
+| 16 | q1607 | WRONG sample 2 | gold solution wrong on sample 2 | E |
+| 17 | q1682 | WRONG | several valid outputs | C |
+| 18 | q1687 | WRONG | "Note: Your program should not print ..." in expected output | A |
+| 19 | q1692 | ERROR EOFError | sample input truncated/mis-split by the statement layout | parse |
+| 20 | q1704 | WRONG (no output) | gold defines functions only (call-based misparsed as stdin) | D call-based |
+Beyond the first 20: 13 more "explanation prose after a blank line" (AtCoder `-----Sample Output-----` sections: q2063, q2211, q2243, q2245, q2263-q2266, q2272, q2289, q2290, q2302, ...), 5 more multiple-valid-answer problems (q2032, q2096, q2106, q2157, q2158), 3 more LeetCode-style (tree / list / class-design examples: q1889, q1907, q1922).
+
+### Main parser-miss patterns (statements whose gold reads stdin but no samples were parsed)
+- P1 data on the header line inside a dashed Example block: `Input:4` / `Output:Henry` (5 statements).
+- P2 unusual titles or header lines with trailing text: `-----Example Text Case-----`, `-----EXAMPLE-----Input:`, `-----Sample Input:-----Sample Input:`, glued `ExampleInput:`.
+- P3 `-----Sample Input-----` followed by a plain `-----Output-----`.
+- P4 HackerRank `=====Input Format=====` statements with no sample in the text at all (about 15): cannot be fixed.
+
+### Fixes (all in `src/codeintel/stage2/sampleio.py`, one test each in `tests/test_sampleio_formats.py`)
+1. Inline header data in dashed blocks only (plain LeetCode `Example 1:` blocks stay call-based).
+2. Titles `example text case`, glued `exampleinput`, `=====X=====` headers, header lines with trailing text (kept as the first content line unless it repeats the title).
+3. Sample input section followed by a generic `Output` section.
+4. Expected output trimmed where explanation prose starts (an `Explanation`/`Note`/`Hint` line anywhere, or after a blank line a line starting with typical prose openers or a >=6-word sentence). Blank-line-separated answers (`YES\n\nNO`) are kept.
+5. Blank lines dropped from sample inputs.
+6. Verifier routing by the candidate program's text (`verifier.program_mode`): programs that read stdin use stdin samples; programs that only define functions / `class Solution` go to the call-based path (fixes category D).
+
+### Coverage before and after (validation, 1,000 statements)
+| | before | after |
+|---|---|---|
+| statements with stdin samples | 336 | 344 |
+| call_based (statement text) | 476 | 476 |
+| none | 177 | 170 |
+| parse_failure | 11 | 10 |
+| gold PASS among stdin-parsed | 246/336 = 73.2% | 299/344 = **86.9%** |
+
+Gold run after the fixes (`logs/gold_v3_newparser.log`, `results/gold_outcomes_v3_newparser.json`): PASS 299, WRONG 25, ERROR 4, UNKNOWN 672 (call_program 606, no_samples 32, call_based-statement-but-stdin-program 20, py2_syntax 7, parse_failure 4, nonstdlib 3). Remaining WRONG are mostly multiple-valid-answer problems and gold bugs.
+
+### True call-based share
+- By the gold solution's own form (`program_mode`: defines functions / `class Solution`, never reads stdin): **606 / 1,000 = 60.6%** of validation queries (456 whose statement the parser also marks call_based, 138 with no recognised examples, 12 other).
+- That is above P's 25% threshold, so the call-based harness is built (step 5).
