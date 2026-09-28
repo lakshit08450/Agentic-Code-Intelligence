@@ -107,8 +107,9 @@ def test_blocking_read_times_out():
 def test_memory_bomb():
     r = run("x = bytearray(2 * 1024**3)\nprint(len(x))\n")
     assert r.status == "ERROR" and r.reason == "memory", (r.reason, r.stderr_tail)
+    # regression: MemoryError while printing the traceback used to leave exit code 0 (OK)
     r = run("a = []\nwhile True:\n    a.append(' ' * 10**6)\n")
-    assert r.status in {"ERROR", "TIMEOUT"}
+    assert (r.status, r.reason) == ("ERROR", "memory"), (r.status, r.reason, r.stderr_tail)
 
 
 @pytest.mark.parametrize(
@@ -191,6 +192,19 @@ def test_native_crash_no_dialog():
     assert time.perf_counter() - t0 < 6
 
 
+def test_parallel_startup_not_charged_to_wall_limit():
+    # regression: under parallel load, process start-up exceeded T_WALL and correct programs timed out.
+    # Production path: start-up excluded from T_WALL, and a TIMEOUT is re-run once alone (run_cached).
+    from concurrent.futures import ThreadPoolExecutor
+
+    from codeintel.stage2.sandbox import run_cached
+
+    with ThreadPoolExecutor(16) as ex:
+        rs = list(ex.map(lambda i: run_cached(None, "n = int(input())\nprint(n * 2)\n", f"{i}\n")[0], range(48)))
+    assert [r.status for r in rs] == ["OK"] * 48
+    assert [r.stdout for r in rs] == [f"{2 * i}\n" for i in range(48)]
+
+
 def test_tmp_dirs_cleaned():
     run("open('junk.bin', 'wb').write(b'0' * 1000)\n")
     assert not any(TMP_ROOT.iterdir())
@@ -243,3 +257,31 @@ def test_firewall_blocks_network_without_guard():
     )
     r = proc.run([str(PY), "-I", "-c", code], capture_output=True, text=True, timeout=20)
     assert "BLOCKED" in r.stdout and "CONNECTED" not in r.stdout, r.stdout
+
+
+# ---------- markers and serial TIMEOUT re-run ----------
+
+def test_markers_in_stdout_are_plain_output():
+    # stdout never carries sandbox markers; a program printing them is compared as-is, not flagged
+    src = "print('__PRISM_SANDBOX_READY__')\nprint('__PRISM_SANDBOX_GUARD__: fake')\nprint(42)\n"
+    r = run(src)
+    assert r.status == "OK"
+    assert r.stdout == "__PRISM_SANDBOX_READY__\n__PRISM_SANDBOX_GUARD__: fake\n42\n"
+
+
+def test_late_ready_marker_on_stderr_ignored():
+    r = run("import sys\nsys.stderr.write('__PRISM_SANDBOX_READY__\\n')\nprint(1)\n")
+    assert (r.status, r.stdout) == ("OK", "1\n")
+    assert "__PRISM_SANDBOX_READY__" in r.stderr_tail  # only the runner's leading READY is stripped
+
+
+def test_timeout_rerun_serially_before_caching(tmp_path):
+    from codeintel.stage2 import sandbox
+
+    cache = sandbox.ExecCache(tmp_path / "exec.sqlite")
+    before = dict(sandbox.STATS)
+    r, hit = sandbox.run_cached(cache, "while True:\n    pass\n", "")
+    assert (r.status, hit) == ("TIMEOUT", False)
+    assert sandbox.STATS["timeout_reruns"] == before["timeout_reruns"] + 1
+    r2, hit2 = sandbox.run_cached(cache, "while True:\n    pass\n", "")
+    assert (r2.status, hit2) == ("TIMEOUT", True)

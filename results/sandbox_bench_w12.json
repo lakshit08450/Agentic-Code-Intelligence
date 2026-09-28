@@ -1,0 +1,20 @@
+{
+  "runs": 500,
+  "workers": 12,
+  "seconds": 102.82,
+  "runs_per_s": 4.86,
+  "timeouts_parallel": 23,
+  "timeouts_spurious": 21,
+  "serial_rerun_s": 19.8,
+  "effective_runs_per_s": 4.08,
+  "wall_p50": 0.9733,
+  "wall_p95": 1.9911649999999994,
+  "status_counts": {
+    "OK:exit_0": 238,
+    "ERROR:exit_1": 224,
+    "TIMEOUT:wall": 23,
+    "UNKNOWN:py2_syntax": 10,
+    "UNKNOWN:nonstdlib": 5
+  },
+  "sandbox_version": "v3-t2.0-m512-o1048576"
+}

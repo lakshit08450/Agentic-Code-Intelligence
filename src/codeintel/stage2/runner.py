@@ -24,6 +24,7 @@ EXIT_SYNTAX = 90
 EXIT_NONSTDLIB = 91
 EXIT_NOJOB = 93
 MARK = b"\n__PRISM_SANDBOX_GUARD__:"
+READY = b"__PRISM_SANDBOX_READY__\n"
 MEM_LIMIT = 512 * 1024 * 1024
 STACK_BYTES = 128 * 1024 * 1024  # Windows rejects >= 256 MB
 
@@ -113,27 +114,38 @@ def install_guard(tmpdir: str) -> None:
 
 def run_program(code, stdout) -> int:
     """exec in a big-stack thread; returns the process exit code."""
-    result = {"code": 0}
+    result = {"code": 1}  # anything but a clean finish is a failure
+
+    def report() -> None:
+        # best effort: printing itself can fail (e.g. under MemoryError)
+        try:
+            import traceback
+            traceback.print_exc()
+        except BaseException:
+            pass
 
     def target():
         try:
             exec(code, {"__name__": "__main__", "__builtins__": builtins})
+            result["code"] = 0
         except SystemExit as e:
             c = e.code
-            if c is None or isinstance(c, int):
-                result["code"] = c or 0
-            else:
-                sys.stderr.write(f"{c}\n")
-                result["code"] = 1
+            result["code"] = (c or 0) if c is None or isinstance(c, int) else 1
+            if result["code"] == 1 and not isinstance(c, int):
+                try:
+                    sys.stderr.write(f"{c}\n")
+                except BaseException:
+                    pass
+        except MemoryError:
+            result["code"] = 1
+            os.write(2, b"MemoryError\n")
         except ModuleNotFoundError as e:
             top = (e.name or "").split(".")[0]
             result["code"] = EXIT_NONSTDLIB if top and top not in sys.stdlib_module_names else 1
-            import traceback
-            traceback.print_exc()
+            report()
         except BaseException:
-            import traceback
-            traceback.print_exc()
             result["code"] = 1
+            report()
 
     threading.stack_size(STACK_BYTES)
     t = threading.Thread(target=target, name="solution")
@@ -162,6 +174,7 @@ def main() -> None:
         code = compile(source, "solution.py", "exec", dont_inherit=True)
     except (SyntaxError, ValueError):
         os._exit(EXIT_SYNTAX)
+    os.write(2, READY)  # parent starts the T_WALL clock here (start-up time excluded)
     rc = run_program(code, sys.stdout)
     try:
         sys.stdout.flush()

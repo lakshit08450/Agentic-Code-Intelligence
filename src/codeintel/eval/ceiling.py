@@ -57,10 +57,18 @@ def bench(model: str, runs: int, workers: int) -> None:
     with ThreadPoolExecutor(max_workers=workers) as ex:
         res = list(ex.map(lambda j: run_program(*j), jobs))  # uncached on purpose
     dt = time.perf_counter() - t0
+    # re-run every TIMEOUT alone: those that no longer time out were caused by parallel load
+    t1 = time.perf_counter()
+    timeouts = [i for i, r in enumerate(res) if r.status == "TIMEOUT"]
+    serial = {i: run_program(*jobs[i]) for i in timeouts}
+    rerun_s = time.perf_counter() - t1
+    spurious = sum(1 for r in serial.values() if r.status != "TIMEOUT")
     c = collections.Counter(r.status + ":" + r.reason for r in res)
     walls = np.array([r.wall_s for r in res])
     out = {
         "runs": len(res), "workers": workers, "seconds": round(dt, 2), "runs_per_s": round(len(res) / dt, 2),
+        "timeouts_parallel": len(timeouts), "timeouts_spurious": spurious, "serial_rerun_s": round(rerun_s, 2),
+        "effective_runs_per_s": round(len(res) / (dt + rerun_s), 2),
         "wall_p50": float(np.percentile(walls, 50)), "wall_p95": float(np.percentile(walls, 95)),
         "status_counts": dict(c.most_common()), "sandbox_version": SANDBOX_VERSION,
     }

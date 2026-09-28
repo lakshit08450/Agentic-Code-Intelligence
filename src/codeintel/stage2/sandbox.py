@@ -39,11 +39,13 @@ T_WALL = 2.0
 MEM_BYTES = 512 * 1024 * 1024
 OUT_CAP = 1 << 20
 ERR_KEEP = 4096
-SANDBOX_VERSION = f"v1-t{T_WALL}-m{MEM_BYTES >> 20}-o{OUT_CAP}"
+STARTUP_MAX = 15.0  # seconds allowed for process start-up before READY (Defender, load)
+SANDBOX_VERSION = f"v3-t{T_WALL}-m{MEM_BYTES >> 20}-o{OUT_CAP}"
 
 EXIT_SYNTAX, EXIT_NONSTDLIB, EXIT_NOJOB = 90, 91, 93
 ERROR_NOT_ENOUGH_QUOTA = 1816  # exit status when the job's per-process CPU time limit kills a process
 MARK = b"__PRISM_SANDBOX_GUARD__:"
+READY = b"__PRISM_SANDBOX_READY__\n"
 
 
 @dataclass
@@ -84,9 +86,17 @@ def _reader(stream, keep: int, cap: int, state: dict, key: str, on_cap) -> None:
         chunk = stream.read1(65536) if hasattr(stream, "read1") else stream.read(65536)
         if not chunk:
             break
+        first = total == 0
         total += len(chunk)
-        if key == "err" and MARK in chunk:
-            state["guard"] = True
+        if key == "err":
+            # READY counts only as the very first bytes of stderr: the runner writes it before any
+            # untrusted code runs, so a program cannot fake an earlier start. stdout never carries markers.
+            if first and chunk.startswith(READY):
+                state["ready_at"] = time.perf_counter()
+                state["ready"].set()
+                chunk = chunk[len(READY):]
+            if MARK in chunk:  # guard marker: a program faking it only marks itself ERROR
+                state["guard"] = True
         if len(buf) < keep:
             buf += chunk[: keep - len(buf)]
         elif key == "err":
@@ -108,7 +118,7 @@ def _rmtree(path: Path) -> None:
         time.sleep(0.05)
 
 
-def run_program(program: str, stdin_text: str, t_wall: float = T_WALL) -> RunResult:
+def run_program(program: str, stdin_text: str, t_wall: float = T_WALL, timings: dict | None = None) -> RunResult:
     """Run one untrusted program on one input. Never raises for anything the program does."""
     if not PY.exists():
         raise RuntimeError(f"sandbox interpreter missing: {PY} (run scripts/setup_sandbox.ps1)")
@@ -121,7 +131,7 @@ def run_program(program: str, stdin_text: str, t_wall: float = T_WALL) -> RunRes
         "TEMP": str(tmp), "TMP": str(tmp), "PYTHONIOENCODING": "utf-8",
     }
     job = _make_job(t_wall)
-    state: dict = {}
+    state: dict = {"ready": threading.Event()}
     t0 = time.perf_counter()
     try:
         p = proc.popen(
@@ -136,6 +146,7 @@ def run_program(program: str, stdin_text: str, t_wall: float = T_WALL) -> RunRes
             )
             win32job.AssignProcessToJobObject(job, hproc)
             win32api.CloseHandle(hproc)
+            state['t_assigned'] = time.perf_counter()
         except Exception:
             p.kill()  # never let it run outside the job; runner would exit EXIT_NOJOB anyway
             raise
@@ -162,16 +173,26 @@ def run_program(program: str, stdin_text: str, t_wall: float = T_WALL) -> RunRes
 
         writer = threading.Thread(target=feed, daemon=True)
         writer.start()
+        # T_WALL counts from the runner's READY signal (just before the program starts), so
+        # Windows process start-up and on-access scanning under parallel load are not charged.
+        deadline = time.perf_counter() + STARTUP_MAX
+        while not state["ready"].is_set() and p.poll() is None and time.perf_counter() < deadline:
+            state["ready"].wait(timeout=0.01)
         try:
-            rc = p.wait(timeout=t_wall)
+            rc = p.wait(timeout=t_wall if state["ready"].is_set() or p.poll() is not None else 0.001)
             timed_out = False
         except subprocess.TimeoutExpired:
             kill()
             rc = p.wait(timeout=5)
             timed_out = True
+        state['t_exited'] = time.perf_counter()
+        startup = state.get("ready_at", time.perf_counter()) - t0
         for r in readers:
             r.join(timeout=5)
         wall = time.perf_counter() - t0
+        if timings is not None:
+            timings.update(assign=state['t_assigned'] - t0, ready=state.get('ready_at', float('nan')) - t0,
+                           exit=state['t_exited'] - t0, joined=wall)
     finally:
         win32api.CloseHandle(job)  # KILL_ON_JOB_CLOSE: nothing survives
         _rmtree(tmp)
@@ -182,6 +203,8 @@ def run_program(program: str, stdin_text: str, t_wall: float = T_WALL) -> RunRes
         status, reason = "ERROR", "guard"
     elif state.get("out_capped") or state.get("err_capped"):
         status, reason = "ERROR", "output_limit"
+    elif timed_out and not state["ready"].is_set():
+        status, reason = "UNKNOWN", "startup_timeout"
     elif timed_out:
         status, reason = "TIMEOUT", "wall"
     elif rc == ERROR_NOT_ENOUGH_QUOTA:
@@ -196,7 +219,7 @@ def run_program(program: str, stdin_text: str, t_wall: float = T_WALL) -> RunRes
         status, reason = "ERROR", "memory" if "MemoryError" in err else f"exit_{rc}"
     else:
         status, reason = "OK", "exit_0"
-    return RunResult(status, reason, out, err, round(wall, 4), rc)
+    return RunResult(status, reason, out, err, round(wall - startup, 4), rc)
 
 
 class ExecCache:
@@ -233,14 +256,61 @@ class ExecCache:
             return self.db.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
 
 
+class _Gate:
+    """Shared/exclusive gate: parallel runs share it; a serial re-run waits until no other run
+    is active and blocks new ones meanwhile, so it really runs alone."""
+
+    def __init__(self) -> None:
+        self.cond = threading.Condition()
+        self.active = 0
+        self.waiting_exclusive = 0
+        self.exclusive_lock = threading.Lock()
+
+    def shared(self, fn):
+        with self.cond:
+            while self.waiting_exclusive:
+                self.cond.wait()
+            self.active += 1
+        try:
+            return fn()
+        finally:
+            with self.cond:
+                self.active -= 1
+                self.cond.notify_all()
+
+    def exclusive(self, fn):
+        with self.exclusive_lock:
+            with self.cond:
+                self.waiting_exclusive += 1
+                while self.active:
+                    self.cond.wait()
+            try:
+                return fn()
+            finally:
+                with self.cond:
+                    self.waiting_exclusive -= 1
+                    self.cond.notify_all()
+
+
+GATE = _Gate()
+STATS = {"timeout_reruns": 0, "timeout_reruns_changed": 0}
+_STATS_LOCK = threading.Lock()
+
+
 def run_cached(cache: ExecCache | None, program: str, stdin_text: str) -> tuple[RunResult, bool]:
-    """Returns (result, was_cached)."""
+    """Returns (result, was_cached). A TIMEOUT under parallel load is re-run once alone before caching."""
     if cache is not None:
         k = cache.key(program, stdin_text)
         hit = cache.get(k)
         if hit is not None:
             return hit, True
-    r = run_program(program, stdin_text)
-    if cache is not None and r.reason != "nojob":
+    r = GATE.shared(lambda: run_program(program, stdin_text))
+    if r.status == "TIMEOUT":
+        r2 = GATE.exclusive(lambda: run_program(program, stdin_text))
+        with _STATS_LOCK:
+            STATS["timeout_reruns"] += 1
+            STATS["timeout_reruns_changed"] += r2.status != "TIMEOUT"
+        r = r2
+    if cache is not None and r.reason not in {"nojob", "startup_timeout"}:
         cache.put(k, r)
     return r, False

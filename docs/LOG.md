@@ -91,3 +91,80 @@ Config: `configs/bakeoff/gte_modernbert.yaml`; commit 8706ac5; CPU (Ryzen 9 270)
 
 ## Notes for Stage 2 error analysis (Phase 2b)
 - The corpus contains 11 exact duplicate documents (8,754 unique texts among 8,765). Per P, they stay in the corpus. Identical texts get identical embeddings and identical execution outcomes, so a duplicate of the gold solution ties with it at every stage; the final order is then decided by mteb's tie-break (doc id), which we do not control. Count how many validation misses at rank 1 involve an exact-duplicate text when doing the Section 13 error analysis.
+
+---
+# Phase 1 + Phase 2a (night of 28/29 Sep; P asleep from ~01:15, working autonomously under P's pre-approved rules)
+
+## Phase 1.1 validation split
+Command: `.venv/Scripts/python -m codeintel.eval.devset` -> `results/devset_split.json`. Commit fc4bcdd.
+- Train qrels (local parquet, 5,000 pairs, one relevant doc per query, score 1) split by `numpy.random.default_rng(13).permutation` over sorted query IDs: train 4,000 / validation 1,000. val IDs sha1 a9ce25b5..., train IDs sha1 87c49589....
+- Validation corpus = full 8,765-doc corpus. All train-qrel query/doc IDs exist in the pinned HF `queries`/`corpus` configs; local query texts equal HF texts.
+- Observation (R1): IDs are `q1`/`d1`-style with matching numbers for pairs. Scoring never reads IDs (`tests/test_no_id_leak.py`).
+
+## Phase 1.2 metrics
+- `src/codeintel/eval/metrics.py` (NDCG/MRR/recall@k, pytrec_eval tie-break) cross-checked against mteb's `calculate_retrieval_scores` (pytrec_eval) on gte-modernbert validation: max abs diff **3.2e-6** (ndcg_at_10), 0 (mrr_at_10, recall_at_100). Target < 1e-3: PASS.
+- `bootstrap.py`: paired bootstrap, 1,000 resamples, seed 13.
+
+## Phase 1.3 bake-off (validation, 1,000 queries, full corpus; GPU-filled caches, fp16)
+Command: `.venv/Scripts/python -m codeintel.eval.bakeoff metrics --configs <cfg>`; configs in `configs/bakeoff/`. Results `results/bakeoff.csv`, per-query `results/bakeoff_perquery.json`, top-100 in `cache/stage1/<name>_val_top100.npz`.
+
+| model | NDCG@10 | MRR@10 | R@1 | R@10 | R@20 | R@50 | R@100 | CPU docs/s | CPU queries/s |
+|---|---|---|---|---|---|---|---|---|---|
+| Qwen3-Embedding-0.6B | **0.8344** | 0.8051 | 0.738 | 0.924 | 0.956 | **0.977** | 0.987 | 3.65 | 0.90 |
+| gte-modernbert-base | 0.7023 | 0.6678 | 0.594 | 0.810 | 0.851 | 0.902 | 0.929 | 0.74 | 0.33 |
+| CodeRankEmbed | 0.6373 | 0.6166 | 0.574 | 0.702 | 0.731 | 0.759 | 0.800 | 4.75 | 1.52 |
+| e5-base-v2 (harness only) | 0.4266 | 0.3997 | 0.348 | 0.512 | 0.550 | 0.614 | 0.650 | - | - |
+
+- Paired bootstrap Qwen3 minus gte on validation: NDCG@10 +0.132 [0.113, 0.153]; recall@50 +0.075 [0.059, 0.095]; recall@100 +0.058 [0.043, 0.075]. All exclude 0.
+- GPU encode rates (RTX 5060, fp16): CodeRankEmbed corpus 112/s, queries 75/s; Qwen3 queries 18.4/s.
+- CPU throughput: `python -m codeintel.eval.bakeoff throughput --n 100` (100 random docs + 100 random validation queries, seed 13, fp32, torch 8 threads, CPU otherwise idle). gte-modernbert is unexpectedly slow on CPU (0.74 docs/s, slower than the 4x larger Qwen3); not investigated tonight.
+- **Projected full CPU test run for Qwen3 without cache**: corpus 8,765 / 3.65 = 40 min + 3,765 test queries / 0.90 = 70 min = **about 1 h 50 min** (well under P's 8 h limit). From cache (the planned final run) it takes about 35 s.
+- Encoder changes for the bake-off: (a) CodeRankEmbed's remote NomicBert code calls `get_extended_attention_mask`, removed in transformers 5 -> shim restoring the transformers 4.x implementation, applied only to trust_remote_code models; (b) CodeRankEmbed uses eager attention; 8 x 8,192 tokens OOMed (12 GB) -> length-aware batching with batch_size x len^2 <= 8192^2 (`attn_budget`); vectors unchanged (each text still encoded independently, padding masked).
+
+### E5 inflation check (P's request)
+- e5-base-v2: validation NDCG@10 **0.4266** vs test **0.1153** (ratio 3.7x). gte-modernbert: 0.7023 vs 0.5774 (1.22x).
+- e5 is NOT close on validation and test, so the condition "e5 close while gte is not" does not hold. Validation (APPS train problems) is much easier than test for every model, including e5-base-v2, which has no known APPS training. The val-to-test gap is therefore not evidence of APPS-train contamination for gte-modernbert (its relative gap is the smallest).
+- Consequence for Qwen3: validation is inflated for all models, so its 0.834 will not transfer to test. Its lead over gte on validation is large and significant, but validation cannot prove it transfers. The pre-declared zero-shot test run (step 3) decides.
+
+## Phase 1.5 licenses and stated training data
+| model | license | stated training data | APPS/CoIR listed? |
+|---|---|---|---|
+| gte-modernbert-base (rev e7f32e3c) | Apache-2.0 | mGTE recipe (paper); mteb registry lists 17 sets (MSMARCO, NQ, HotpotQA, FEVER, MIRACL, MrTyDi, DuRetrieval, T2Retrieval, ...) | no |
+| CodeRankEmbed (rev 3c4b6080) | MIT | CoRNStack, 21M GitHub code/docstring pairs; init Arctic-Embed-M-Long | no (not in mteb registry) |
+| Qwen3-Embedding-0.6B (rev 97b0c614) | Apache-2.0 | mteb registry lists 11 sets incl. CodeSearchNet, MSMARCO, NQ, HotpotQA, FEVER | no |
+None states APPS or CoIR training data; closed training mixes cannot be fully verified.
+
+## Phase 2a sandbox build (plan 11.3)
+- `scripts/setup_sandbox.ps1`: python-3.11.9-embed-amd64.zip, SHA256 009D6BF7E3B2DDCA3D784FA09F90FE54336D5B60F0E0F305C37F400BF83CFD3B; `python.exe` Authenticode Valid (CN=Python Software Foundation). Firewall rule created by P as admin (about 01:03).
+- Implementation choices (all additive or neutral):
+  - `-B` added to `-I -X utf8` (no bytecode writes, which would otherwise trip the write guard).
+  - `exit`/`quit` builtins defined by the runner (the embeddable package skips `site`; many APPS solutions call `exit()`).
+  - Program runs in a thread with a 128 MB stack (Windows main thread has 1 MB; 256 MB is rejected by Windows).
+  - Job also has DIE_ON_UNHANDLED_EXCEPTION and UI restrictions; the runner calls SetErrorMode so crashes never open a dialog.
+  - The runner verifies job membership by querying its own job's limits (ActiveProcessLimit=1, 512 MB), because a process may already sit in an inherited job.
+  - `_winapi` is already loaded at interpreter start, so the "import" audit event never fires for it; the runner unloads `ctypes*`/`_winapi` from sys.modules before installing the hook; `_winapi.*` audit events are also blocked.
+- Bugs found by tests and fixed (each has a regression test): `threading.stack_size(256 MB)` rejected on Windows; `import _winapi` not blocked; MemoryError while printing the traceback left exit code 0 (OK), so the exit code now defaults to failure; T_WALL included process start-up (below).
+- `tests/test_sandbox.py` (33 tests): infinite loop, sleep, 2 GB and incremental memory bombs, child processes (subprocess, os.system, startfile, multiprocessing, execv, spawnv), socket via guard, network via firewall only (no guard), job child-process and memory limits without guard, writes outside tmp (open/os.open/pathlib), delete/rename/rmtree, 100 MB output, ctypes/_ctypes/_winapi, swallowed violations, native crash, tmp cleanup, markers in stdout, late READY, parallel start-up, serial TIMEOUT re-run. 33/33 pass (run twice).
+
+### Gold run v0 (sandbox v1; INVALID because of the timer bug, kept for the record)
+Command: `python -m codeintel.eval.ceiling gold --workers 12` (log `logs/gold_v0.log`), 85 s for 1,000 queries.
+- UNKNOWN 670 (call_based 476, no_samples 177, parse_failure 11, py2 4, nonstdlib 2), PASS 159, TIMEOUT 122, WRONG 35, ERROR 14.
+- The 122 TIMEOUTs were an artefact: re-run alone, the gold solutions finish in 0.15-1.1 s with correct output.
+
+### Diagnosis: Windows process creation cost
+- Bare `Popen` median: sandbox `python.exe` 0.56 s, venv `python.exe` 1.0 s, `cmd.exe` 0.004 s. The cost is specific to launching Python executables (most likely on-access antivirus/reputation scanning). Defender settings NOT changed (plan: needs P's approval).
+- With 12 workers: start-up p50 1.9 s, p95 3.2 s; post-READY time p95 up to 2 s under load.
+- Fixes (sandbox v3): the runner writes READY to stderr right before executing the program, and T_WALL (2 s) counts from READY; start-up allowance 15 s (result UNKNOWN startup_timeout, not cached, if exceeded). READY is honoured only as the first bytes of stderr; stdout never carries markers and is compared exactly as printed. (P asked for "start of stdout"; the markers live on stderr, so the same rule is applied there and stdout stays marker-free; tested.) A TIMEOUT is re-run once alone (a shared/exclusive gate pauses new parallel runs) before caching. The Job's CPU-time limit (T_WALL + 1 s user time) is unchanged.
+
+### Worker-count sweep (step 1 decision)
+Command: `python -m codeintel.eval.ceiling bench --model gte-modernbert-base --runs 500 --workers W` for W in 4, 8, 12, 16 (same 500 runs: top-10 gte candidates x samples of the first stdin validation queries; uncached; every TIMEOUT re-run alone). Sandbox v3, commit after fc4bcdd (uncommitted sandbox v3). Files `results/sandbox_bench_w*.json`.
+
+| workers | runs/s | TIMEOUTs in parallel | of which spurious (pass alone) | effective runs/s incl. serial re-runs |
+|---|---|---|---|---|
+| 4 | 1.75 | 23 | 21 | 1.62 |
+| 8 | 3.31 | 31 | 29 | 2.83 |
+| 12 | 4.86 | 23 | 21 | **4.08** |
+| 16 | 5.13 | 35 | 33 | 3.81 |
+
+- **Decision: 12 workers** (best effective throughput; 16 adds spurious timeouts). Spurious timeouts exist even at 4 workers: single runs show random ~1-2 s stalls (process creation 0.2-2 s, occasional post-READY stalls), consistent with on-access scanning. The serial TIMEOUT re-run absorbs them.
+- Throughput is about 4 runs/s, far below Linux expectations; this bounds tonight's Stage 2 depth (step 6).
