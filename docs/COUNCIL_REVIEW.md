@@ -64,3 +64,6 @@ Brief given to the council: produce the plan with the highest probability of exc
 6. P1 kept minimal and required; Bonus last.
 7. Cut: fine-tuning, LLM reranking/rewriting, models above ~0.6B, the JavaScript structural track, extra ablations.
 8. Honesty: >95% is not promised. Report A and B, validation and test, the ceiling and the error breakdown.
+
+## Revision (Mon 28 Sep, late): native Windows
+P chose to run natively on Windows 11 Home without WSL2 or Docker. Windows Home has no Hyper-V or Windows Sandbox, so the Docker sandbox in decision 1 is replaced by layered user-space isolation: a dedicated Python embeddable interpreter, an outbound firewall block on that interpreter, a Job Object (memory, no child processes, CPU time, kill on close) and an audit-hook guard. The council's view: this is weaker than a container and must be described honestly in the README, but it is proportionate for the APPS corpus (public competitive-programming solutions). Hostile-program tests remain a hard gate before any bulk run. The local RTX 5060 replaces Kaggle/Colab for development encodes (decision 5); CPU remains the submitted default.

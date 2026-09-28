@@ -3,3 +3,6 @@ cache/
 logs/
 .venv/
 __pycache__/
+*.pyc
+tools/sandbox-python/
+*.pid

@@ -2,6 +2,7 @@
 
 Project: Samsung PRISM GenAI Hackathon, Theme 01 (code retrieval on MTEB AppsRetrieval + versioned retrieval).
 Deadline: Wed 30 Sep 2026, submit by 18:00 IST.
+Platform: native Windows 11 Home. No WSL2, no Docker. Local RTX 5060 (8 GB) for development encodes.
 Source of truth: `IMPLEMENTATION_PLAN.md`. Rationale: `docs/COUNCIL_REVIEW.md`.
 
 ## Workflow
@@ -14,16 +15,22 @@ Source of truth: `IMPLEMENTATION_PLAN.md`. Rationale: `docs/COUNCIL_REVIEW.md`.
 1. Scoring code uses only query text and document text. Never read qrels, query/doc IDs or `meta_information` as features. IDs are dictionary keys only. `tests/test_no_id_leak.py` must pass.
 2. No tuning on the test split. Selection uses the validation split from train (seed 13, 4,000/1,000).
 3. Never open test qrels outside the final `mteb.evaluate` run. Do not "peek" at test labels to debug a low score.
-4. APPS documents are untrusted code. Run them only through `stage2/sandbox.py` (Docker, no network, rlimits). Never exec/eval/import them in-process. Never disable the sandbox to make something work.
+4. APPS documents are untrusted code. Run them only through `stage2/sandbox.py` with `tools/sandbox-python/python.exe` (firewall-blocked, Job Object limits, audit-hook guard in `runner.py`). Never run them with the project venv, never exec/eval/import them in the main process, and never weaken or bypass a sandbox layer to make something work.
 5. The submitted pipeline defaults to CPU. GPU is for development encodes only.
 6. No number goes into README/PPT/demo unless a script produced it into `results/`.
 
 ## Long-running jobs
-- Encodes, Stage 2 execution runs and MTEB runs take minutes to hours. Start them in the background with a log file, e.g.
-  `nohup python -m codeintel.eval.ceiling --config configs/stage2_final.yaml > logs/ceiling.log 2>&1 &`
-  then poll the log. Do not hold a foreground command open for long jobs.
+- Encodes, Stage 2 execution runs and MTEB runs take minutes to hours. Start them detached with the launcher, e.g.
+  `.venv/Scripts/python scripts/bg.py logs/ceiling.log -- .venv/Scripts/python -m codeintel.eval.ceiling --config configs/stage2_final.yaml`
+  then poll the log. Do not hold a foreground command open for long jobs, and do not rely on `nohup`.
 - Never measure latency while a long job is using the CPU.
 - MTEB caches results under `~/.cache/mteb`; always use the overwrite option so reruns actually run.
+
+## Windows conventions
+- Always use the venv interpreter (`.venv/Scripts/python`); the machine also has Python 3.10 and 3.14.
+- `PYTHONUTF8=1`; open text files with `encoding="utf-8"`; `pathlib` for paths; `if __name__ == "__main__":` in every script (spawn-based multiprocessing).
+- Normalise `\r\n` before comparing program output.
+- The one-time firewall rule needs admin rights: print the exact PowerShell command for the user to run; do not try to elevate yourself.
 
 ## Code conventions
 - Python 3.11, package under `src/codeintel/`, configs in YAML under `configs/`, every preprocessing/scoring option is a config flag.

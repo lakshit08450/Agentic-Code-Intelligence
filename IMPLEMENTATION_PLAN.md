@@ -1,6 +1,7 @@
 # Agentic Code Intelligence: Implementation Plan (Chairman's synthesis)
 Samsung PRISM GenAI Hackathon, 3rd Edition, Theme 01. Revised Mon 28 Sep 2026.
 Hard deadline: Wed 30 Sep 2026, 23:59 assumed IST (confirm the exact time). Aim to submit by 18:00.
+Platform: native Windows 11 Home (no WSL2, no Docker). Local GPU: RTX 5060 Laptop, 8 GB. CPU: Ryzen 9, 8 cores / 16 threads, 15 GB RAM.
 Submission is via a Google Form link that only registered teams receive.
 
 This plan replaces the earlier MVP plan. The reasoning behind every decision (five council analyses and their peer review) is in `docs/COUNCIL_REVIEW.md`. Read it once; this file is what you build from.
@@ -20,7 +21,7 @@ This plan replaces the earlier MVP plan. The reasoning behind every decision (fi
 - R1. Scoring code sees only query text and document text. It never reads qrels, query or document IDs, or any `meta_information` field. IDs may be used only as dictionary keys to return results, never as features. A unit test must shuffle all IDs and assert the ranking of texts is unchanged.
 - R2. No tuning on the test split. All selection uses the validation split carved from train (Section 10.1). The test split is run only for frozen configs, and every test run is logged.
 - R3. Test qrels are loaded only inside the final MTEB evaluation. No script in this repo opens them for analysis or debugging.
-- R4. Untrusted code (every APPS document) runs only inside the sandbox in Section 11.3. Never `exec`, `eval` or `import` a document in the main process.
+- R4. Untrusted code (every APPS document) runs only through the sandbox in Section 11.3 (dedicated interpreter, firewall block, Job Object limits, audit-hook guard). Never `exec`, `eval` or `import` a document in the main process, and never run a document with the project's own Python.
 - R5. The submitted pipeline must run on CPU. GPUs may speed up development encodes; the README defaults to `device: cpu`, and a CPU spot-check must reproduce GPU embeddings (Section 6).
 
 ---
@@ -49,8 +50,8 @@ Deliverables: MTEB results JSON on a GitHub Release; PPT; GitHub repo that runs 
 
 Ask P:
 1. Registration completed by 16 Sep? [V: deck]
-2. Local machine: OS, CPU cores, RAM, whether Docker is installed.
-3. Kaggle or Colab account available for GPU encodes?
+2. Run the one-time admin PowerShell command for the sandbox firewall rule (Section 11.3) when Claude Code prints it.
+3. Keep a Kaggle or Colab account as a backup only if the local GPU fails.
 
 Email to prism@samsung.com (P sends; do not wait for the answer to start work):
 > Subject: Theme 01 clarifications (Agentic Code Intelligence)
@@ -95,14 +96,16 @@ Why fusion is valid inside `AbsEncoder`: if u1, u2 are unit vectors from two mod
 | Work | Where | Why |
 |------|-------|-----|
 | Writing code, tests, git | Local, Claude Code | The deliverable is a repo |
-| Bake-off and corpus/query encodes | Kaggle (preferred) or Colab GPU | Hours on CPU, minutes on a T4 |
-| Stage 2 execution runs | Local (or whichever machine has most cores), inside Docker | Many small subprocesses; scales with cores |
+| Bake-off and corpus/query encodes | Local RTX 5060 (CUDA build of PyTorch); Kaggle only as backup | Hours on CPU, minutes on the GPU |
+| Stage 2 execution runs | Local, through the Windows sandbox (Section 11.3) | Many small subprocesses; scales with cores |
 | Final MTEB runs producing JSON | Local CPU, reading the embedding cache | Cache hits make it fast; proves CPU path works |
 | P1 demo, latency numbers | Local CPU | The video must show CPU speed |
 
 - Embedding caches are small (8,765 × 768 float32 ≈ 27 MB per model), so move them as files.
 - CPU equivalence check (required, Phase 1): encode 200 documents and 50 queries on CPU, compare with the GPU cache; max abs cosine difference must be < 1e-3, and top-10 rankings on those queries must match. Log it.
-- On Kaggle/Colab: write caches and results to persistent storage (Kaggle `/kaggle/working` + download, or Google Drive), pin the same package versions as local, and bypass MTEB's result cache.
+- GPU setup: the RTX 50-series needs a recent CUDA build of PyTorch (CUDA 12.8 or later [H: VERIFY on pytorch.org and with `torch.cuda.get_arch_list()`]). Log `torch.__version__`, `torch.version.cuda` and a test matmul on the GPU. Use fp16 for encodes; if Qwen3-Embedding-0.6B runs out of the 8 GB, lower the batch size before lowering the length cap.
+- The submitted configs default to `device: cpu`. The GPU only fills the cache faster.
+- Keep the project outside OneDrive (e.g. `C:\dev\prism-code-intel`); OneDrive syncing locks files mid-write and slows thousands of small writes.
 
 ## 7. Repository layout
 
@@ -112,17 +115,18 @@ prism-code-intel/
   IMPLEMENTATION_PLAN.md
   README.md
   pyproject.toml / requirements.txt      # pinned at the end
-  Dockerfile.sandbox                     # verifier container
+  tools/sandbox-python/                  # (gitignored) Python 3.11 embeddable package, used only by the sandbox
   configs/
     bakeoff/*.yaml                       # one per candidate model
     stage1_final.yaml, stage2_final.yaml, versioning.yaml
   src/codeintel/
     common/        config.py, hashing.py, cache.py, timing.py, log.py
     stage1/        encoder.py (PrePostPipelineEncoder), query_pre.py, doc_pre.py, fusion.py
-    stage2/        sampleio.py, sandbox.py, compare.py, verifier.py, reranker.py (ExecutionReranker)
+    stage2/        sampleio.py, sandbox.py, runner.py (runs inside the sandbox), compare.py, verifier.py, reranker.py (ExecutionReranker)
     eval/          devset.py, metrics.py, bootstrap.py, bakeoff.py, ceiling.py, tune_stage2.py, run_mteb.py
     versioned/     ingest.py, units.py, store.py, search.py, cli.py
-  scripts/         encode.py (GPU/CPU encode to cache), cpu_check.py, simulate_versions.py, kaggle_encode.ipynb
+  scripts/         encode.py (GPU/CPU encode to cache), cpu_check.py, simulate_versions.py, bg.py (background job launcher),
+                   setup_sandbox.ps1 (downloads the embeddable Python, prints the firewall command)
   tests/           test_no_id_leak.py, test_fusion.py, test_sampleio.py, test_sandbox.py, test_compare.py, test_metrics.py
   docs/            LOG.md, COUNCIL_REVIEW.md, DEMO_VIDEO.md
   results/         appsretrieval_results_A.json, appsretrieval_results_B.json, bakeoff.csv, ceiling.json,
@@ -132,8 +136,10 @@ prism-code-intel/
 
 ## 8. Environment and API verification
 
-- Python 3.11 venv. Packages: `mteb` (v2 with `mteb.evaluate`, 2.2.0 or later; 2.1.4 has a CPU/GPU idle bug [V]), `sentence-transformers`, `transformers` (≥4.48 for gte-modernbert [V]; newer if Qwen3-Embedding needs it, check its card), CPU `torch` locally, `datasets`, `numpy`, `pyyaml`, `pytest`. Add whatever `trust_remote_code` models require.
-- Docker for the sandbox. If Docker is unavailable on Linux, fall back to `unshare -rn` plus rlimits (Section 11.3) and log it.
+- Native Windows. Install Python 3.11 (`winget install Python.Python.3.11`, or python.org), create `.venv` with `py -3.11 -m venv .venv`. The machine also has 3.10 and 3.14; always use the venv interpreter.
+- Packages: `mteb` (v2 with `mteb.evaluate`, 2.2.0 or later; 2.1.4 has a CPU/GPU idle bug [V]), `sentence-transformers`, `transformers` (≥4.48 for gte-modernbert [V]; newer if Qwen3-Embedding needs it, check its card), `torch` (CUDA build for development, see Section 6; the README documents the CPU build as the default), `datasets`, `numpy`, `pyyaml`, `pytest`, `pywin32` (Job Objects), `psutil`. Add whatever `trust_remote_code` models require.
+- Windows specifics: set `PYTHONUTF8=1`; open every text file with `encoding="utf-8"`; guard every script with `if __name__ == "__main__":` (Windows multiprocessing uses spawn); use `pathlib`, never hardcoded `/` paths; normalise `\r\n` in outputs before comparison. MTEB's result cache is under `%USERPROFILE%\.cache\mteb`.
+- Claude Code on Windows runs shell commands through Git Bash; `nohup` may be missing. Start long jobs with `python scripts/bg.py <logfile> -- <command...>`, which launches a detached process (`DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP`), redirects output to the log and writes a `.pid` file.
 - Phase 0 first task, VERIFY by reading installed source (`mteb/models/abs_encoder.py`, the cross-encoder/search protocols, `mteb.evaluate`, the two-stage reranking helpers):
   - batch schema passed to `encode` (this plan assumes `batch["text"]` lists of strings);
   - how `PromptType` arrives; whether `mteb_model_meta` is required;
@@ -158,10 +164,10 @@ Ladder rule: after every phase the repo is shippable. If time runs out, ship the
 
 ### Day 1: Mon 28 Sep (today and tonight)
 **Phase 0: scaffold, API check, safe JSON**
-- 0.1 Repo, venv, `pytest` smoke test, `CLAUDE.md`, `docs/LOG.md`, `results/env.json` (OS, CPU, cores, RAM, Docker yes/no).
+- 0.1 Repo, venv, `pytest` smoke test, `CLAUDE.md`, `docs/LOG.md`, `results/env.json` (OS, CPU, cores, RAM, GPU, torch and CUDA versions).
 - 0.2 Section 8 API verification, logged.
 - 0.3 `PrePostPipelineEncoder` as a plain wrapper around one model with the embedding cache; `run_mteb.py` (with `import json`, which the guideline snippet is missing).
-- 0.4 `scripts/encode.py`: encode corpus + all queries for a config to `cache/embeddings/`, `--device cuda|cpu`. Kaggle notebook `scripts/kaggle_encode.ipynb` that clones the repo and runs it.
+- 0.4 `scripts/encode.py`: encode corpus + all queries for a config to `cache/embeddings/`, `--device cuda|cpu`, resumable in chunks. `scripts/bg.py` launcher. Verify the CUDA build of PyTorch works on the RTX 5060 before the first encode.
 - 0.5 G1 on GPU encodes, MTEB run locally from cache.
 - 0.6 Output A v0 with gte-modernbert-base → `results/appsretrieval_results_A.json`; push a draft GitHub release. This is the fallback submission.
 - Acceptance: G1 passed and logged; release draft exists.
@@ -261,18 +267,23 @@ Unit tests: output shape, unit norm, fusion identity (cosine of concatenation eq
 ### 11.2 Output comparison (`compare.py`)
 Token-wise after `split()`: exact tokens match; else numeric tokens within 1e-6 relative/absolute; optional case-insensitive mode for YES/NO style answers (enable only if it raises the gold PASS rate on validation). Lengths must match. PASS requires every sample to pass.
 
-### 11.3 Sandbox (`sandbox.py`)
-Default: one long-lived Docker container from `Dockerfile.sandbox` (`python:3.11-slim`, plus `python2` if cheaply available), started with `--network none --memory 4g --pids-limit 512 --read-only --tmpfs /tmp:rw,size=256m --cap-drop ALL --security-opt no-new-privileges`, non-root user. The worker pool inside runs each program with:
-```python
-subprocess.run([PY, "-I", prog_path], input=sample_in, capture_output=True,
-               timeout=T_WALL, cwd=tmpdir, env={"PATH": "/usr/bin:/bin"},
-               preexec_fn=set_limits)     # RLIMIT_CPU, RLIMIT_AS (512 MB), RLIMIT_FSIZE (1 MB), RLIMIT_NPROC (in container only)
-```
-- Truncate stdout at 1 MB. Kill the process group on timeout. Delete the temp dir after each run.
-- Python 2: if `compile()` raises `SyntaxError` under Python 3, run with `python2` if present; otherwise UNKNOWN.
-- Defaults [H]: T_WALL = 2 s per sample; tune only if the gold TIMEOUT rate on validation is high.
-- Fallback without Docker (Linux only): `unshare -rn` + the same rlimits; never run unsandboxed. Log which mode ran.
-- Parallelism: a process pool sized to physical cores; results cached in `cache/exec/` keyed by sha1(doc text) + sha1(sample input) + sandbox version.
+### 11.3 Sandbox (`sandbox.py`, `runner.py`): native Windows
+Decision: the project runs natively on Windows 11 Home. Home has no Hyper-V and no Windows Sandbox, and P chose not to use WSL2/Docker. Isolation is therefore layered in user space. It is weaker than a container: adequate for public competitive-programming solutions (the APPS corpus), not for arbitrary malware. State this plainly in the README.
+
+Layers (all required before any bulk run):
+1. Dedicated interpreter. `scripts/setup_sandbox.ps1` downloads the official Python 3.11 "Windows embeddable package" zip from python.org into `tools/sandbox-python/` (gitignored). Documents run only with `tools/sandbox-python/python.exe`, never with `.venv`. It has the standard library only. (Do not use a venv here: on Windows a venv's `python.exe` is a redirector that launches the base interpreter, so a firewall rule on it would not hold.)
+2. No network. One-time admin PowerShell, printed by the setup script for P to run:
+   `New-NetFirewallRule -DisplayName "PRISM APPS sandbox" -Direction Outbound -Action Block -Program "<absolute path>\tools\sandbox-python\python.exe"`
+   A test program that opens a socket to an external host must fail.
+3. Audit-hook guard. `runner.py` is trusted code run by the sandbox interpreter with `-I -X utf8`. It installs `sys.addaudithook` that raises on: `socket.*`, `subprocess.Popen`, `os.system`, `os.exec*`, `os.spawn*`, `os.startfile`, `os.posix_spawn`, `ctypes.*`, `winreg.*`, `os.remove`, `os.unlink`, `os.rmdir`, `os.rename`, `shutil.rmtree`, `import` of `ctypes`/`_ctypes`/`_winapi`, and `open` in a write/append mode on any path outside the temp directory (integer fds 1 and 2 allowed; reading fd 0, e.g. `open(0).read()` and `os.read(0, n)`, is allowed because fast-I/O solutions use it). It then compiles the program and runs it with `exec(code, {"__name__": "__main__"})`. Python's docs say audit hooks are not a complete security boundary; they are defense in depth on top of layers 1, 2 and 4.
+4. Resource limits via a Windows Job Object (`pywin32` `win32job`): process memory 512 MB, active process limit 1 (no child processes), per-process user-time limit (T_WALL + 1 s), `KILL_ON_JOB_CLOSE`. The parent assigns the child to the job immediately after `Popen`; `runner.py` waits up to 1 s until `win32job.IsProcessInJob` is true before running any untrusted code, and exits with a dedicated UNKNOWN code if it never is.
+5. Per run: wall timeout T_WALL = 2 s per sample [H], terminating the whole job on timeout; stdin = sample input; stdout read in chunks and capped at 1 MB (kill when exceeded); `cwd` = a fresh directory under `cache/tmp/`, deleted afterwards; minimal environment (`SYSTEMROOT`, `TEMP`/`TMP` pointing at that directory, `PYTHONIOENCODING=utf-8`); `creationflags = CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP`.
+6. Outcome mapping: `SyntaxError` at compile (usually Python 2 code) → UNKNOWN; `ImportError`/`ModuleNotFoundError` for a non-stdlib module (e.g. numpy) → UNKNOWN; a guard violation → ERROR and logged; job-limit kill → TIMEOUT or ERROR as appropriate.
+
+Hostile-program tests in `tests/test_sandbox.py` (must pass before Phase 2a.2): infinite loop, memory bomb, spawning a child process, socket connect, writing outside the temp dir, deleting a file, 100 MB of output, importing ctypes. Each must end as TIMEOUT or ERROR without side effects.
+
+Parallelism: a `ThreadPoolExecutor` with about 12 workers (each run is its own subprocess, so threads avoid Windows spawn overhead); tune by measured runs/s. Windows process start-up and Defender scanning make each run slower than on Linux: measure throughput on 500 runs first and re-plan the overnight job from that number. Do not change Defender settings without asking P.
+Cache: `cache/exec/`, keyed by sha1(doc text) + sha1(sample input) + sandbox version.
 
 ### 11.4 Outcomes and score
 Outcome ∈ {PASS, WRONG (ran, output differs), ERROR (exception / nonzero exit), TIMEOUT, UNKNOWN}.
@@ -329,7 +340,7 @@ CREATE TABLE embeddings(emb_key TEXT PRIMARY KEY, row INTEGER);
 
 ## 14. README and submission checklist
 
-README must contain: overview and architecture diagram; hardware requirements and CPU runtimes; setup from a clean machine (venv, Docker sandbox build); how to regenerate both JSONs (from cache and from scratch); how to run Path B (all three source types, `--rev`, `--range`, `--verify`); how to run tests; results tables; the sandbox's security model; known limitations; model licenses and stated training data; a statement that no test data was used for selection; note that development encodes used a GPU and that the CPU path reproduces them.
+README must contain: overview and architecture diagram; hardware requirements and CPU runtimes; setup from a clean Windows machine (Python 3.11 venv, sandbox setup script and the one-time firewall rule); how to regenerate both JSONs (from cache and from scratch); how to run Path B (all three source types, `--rev`, `--range`, `--verify`); how to run tests; results tables; the sandbox's security model; known limitations; model licenses and stated training data; a statement that no test data was used for selection; note that development encodes used a GPU and that the CPU path reproduces them.
 
 From the guidelines [V]:
 - [ ] Final JSON generated by MTEB, uploaded to a GitHub Release (attach A and B; state which is the submission).
@@ -350,7 +361,7 @@ PPT: (1) title, Theme 01, team; (2) problem in our words; (3) what APPS is and w
 Video (≤5 min): problem (20 s) → two APPS-style queries live with Stage 1 then Stage 2 timings (80 s) → a query where Stage 2 fixes Stage 1's ranking (40 s) → new commit, incremental vs full rebuild (50 s) → `--rev` and `--range` on the same query (50 s) → results and limitations (40 s).
 
 ## 16. Cut (do not build)
-Fine-tuning and adapters; LLM rerankers or rewriting; models above ~0.6B; the JavaScript structural/usage track (tree-sitter, call graph, agent loop, router, BM25/RRF); FastAPI, web UI, Docker for the app (Docker is for the sandbox only); optimization hints; doc headers and identifier renaming; multi-window pooling; train-neighbor expansion; hand-labelled repo query sets; ONNX/quantization; Hungarian/cosine lineage matching.
+Fine-tuning and adapters; LLM rerankers or rewriting; models above ~0.6B; the JavaScript structural/usage track (tree-sitter, call graph, agent loop, router, BM25/RRF); FastAPI, web UI, Docker and WSL2; optimization hints; doc headers and identifier renaming; multi-window pooling; train-neighbor expansion; hand-labelled repo query sets; ONNX/quantization; Hungarian/cosine lineage matching.
 
 ## 17. Risks and fallbacks
 | Risk | Mitigation |
@@ -359,9 +370,10 @@ Fine-tuning and adapters; LLM rerankers or rewriting; models above ~0.6B; the Ja
 | mteb two-stage API differs | Phase 0 verification; deadline Tue 18:00 for B, else fallback |
 | Gold PASS rate low (parser, py2, call-based) | Measured in Phase 2a; fix top failure causes; UNKNOWN is neutral, so Stage 2 cannot hurt those queries much |
 | Near-duplicate problems pass each other's samples | Ties break by cosine; report the duplicate-pass rate |
-| Sandbox escape or machine damage | Docker with no network, read-only FS, rlimits, non-root; hostile-program tests in Phase 2a |
+| Sandbox escape or machine damage | Dedicated embeddable interpreter, firewall block, Job Object limits, audit-hook guard, temp-dir cwd; hostile-program tests in Phase 2a; README states the limits honestly |
+| Windows process start-up too slow for Stage 2 | Measure runs/s on 500 runs first; lower k or run overnight; cache every result |
 | Qwen3-0.6B too slow on CPU | Throughput measured in bake-off; drop it if the full CPU run is impractical |
-| Kaggle/Colab session loss | Caches written to persistent storage after each chunk; encode script resumable |
+| RTX 5060 not supported by the installed PyTorch | Install the CUDA 12.8+ build; fallback Kaggle GPU for encodes only |
 | Overfitting validation | Tiny grids, bootstrap gate, single test run per frozen config |
 | Val→test shift (difficulty mix) | Report both; do not re-tune on test |
 | Time overrun | Ship the last completed phase; Output A from Phase 0 is the floor |
