@@ -168,3 +168,9 @@ Command: `python -m codeintel.eval.ceiling bench --model gte-modernbert-base --r
 
 - **Decision: 12 workers** (best effective throughput; 16 adds spurious timeouts). Spurious timeouts exist even at 4 workers: single runs show random ~1-2 s stalls (process creation 0.2-2 s, occasional post-READY stalls), consistent with on-access scanning. The serial TIMEOUT re-run absorbs them.
 - Throughput is about 4 runs/s, far below Linux expectations; this bounds tonight's Stage 2 depth (step 6).
+
+## Step 3 PRE-DECLARATION (written before the run): Qwen3-Embedding-0.6B zero-shot test run
+- Authorised by P (night instructions, item 3): ONE test run, zero-shot, nothing tuned, logged like G1. This is test run #3 overall (after G1 e5 and G1/Output A v0 gte).
+- Config: `configs/bakeoff/qwen3_0p6b.yaml` exactly as used in the bake-off (card query format with the plan's instruction, no doc prompt, 8,192-token cap, raw text). No change was made to it after seeing validation numbers.
+- Command: `python -m codeintel.eval.run_mteb --config configs/bakeoff/qwen3_0p6b.yaml --require-cache --out results/test_qwen3_zeroshot.json` (no prediction folder; CPU, vectors from the GPU-filled cache).
+- Decision rule (P's): Stage 1 = Qwen3 if its test ndcg_at_10 > 0.57738 (gte-modernbert G1) AND the projected full CPU test run is under 8 h (projected 1 h 50 min, measured before this run); otherwise keep gte-modernbert. No other test runs of any kind.
