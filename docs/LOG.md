@@ -306,3 +306,15 @@ P reports McAfee real-time scanning off and Defender not running; no exclusions 
 - `src/codeintel/versioned/`: `units.py` (files > 300 lines -> 80-line windows, 20 overlap), `ingest.py` (git first-parent revisions with `git diff -M` rename detection, snapshot dirs, JSONL), `store.py` (index.sqlite per plan 12.2 plus `units.key` and a `snippets` table; vectors.npy; incremental add_version: embed only missing emb_keys, close changed/vanished revisions, identity by key, git rename, or unchanged content moved), `search.py` (`search_rev`, `search_range` with best revision per unit (ties -> most recent), versions matched, history introduced/modified/removed; optional `--verify` Stage 2 re-rank), `cli.py` (index / search --rev / search --range / versions; CPU default).
 - `tests/test_versioned.py`: 5 passed (tiny git repo v1-v3 with add/rename/modify/remove; JSONL and snapshot sources; windowing).
 - Not yet done: `scripts/simulate_versions.py` and the Section 12.5 metrics / CPU latency (they need the CPU; scheduled after the test job).
+
+## 2026-09-29 17:31 k=50 vs k=20 (validation) and PRE-DECLARATION of the final Stage 2 test run
+Command: `python scripts/k50_vs_k20.py` -> `results/k50_vs_k20.json` (exec cache only; frozen weights w_pass 0.3, w_wrong 0.05, w_err 0.05, trivial_pass_factor 0.1, multi_answer_neutral true; 344 validation stdin queries, test-mix weighted).
+- Weighted NDCG@10: k=20 0.9224, k=50 0.9444. Paired weighted bootstrap k=50 minus k=20: **+0.0220 [0.0008, 0.0503]**, excludes 0. MRR@10 +0.0219 [0.0008, 0.0502]. Unweighted NDCG@10 +0.0404 [0.0211, 0.0626]. 15 queries improve, 0 get worse.
+- k=20 had been chosen for time, not merit (see midday entry). The CI excludes 0, so per P's rule the k=50 run is authorised.
+
+**PRE-DECLARATION (written at 17:31, before Output B finishes and before either test score is seen; text given by P):**
+"Final Stage 2 config = k=50 with the frozen weights. If the k=50 test run completes by 07:00 Wed, results/appsretrieval_results_B_k50.json is the submission regardless of its score relative to k=20. If it fails or doesn't finish, the k=20 Output B is the submission."
+- Config file: `configs/stage2_final_k50.yaml` (identical to `configs/stage2_final.yaml` except k: 50).
+- Command (starts automatically when the k=20 job's process exits; nothing else runs on the CPU meanwhile): `python -m codeintel.eval.run_two_stage --split test --reuse-a --stage2-config configs/stage2_final_k50.yaml --out-suffix _k50` (re-ranks the saved Output A predictions; no second Stage 1 test pass; sandbox suite runs first). Log `logs/test_two_stage_k50.log`.
+- This is the last Stage 2 test run. Estimated 96,086 new executions (ranks 21-50) at 2.7-4 per s: 6.7-10 h.
+- Format-match bonus: skipped (P's decision).

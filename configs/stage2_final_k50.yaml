@@ -1,0 +1,9 @@
+# FINAL (pre-declared 29 Sep 17:31): stage2_final.yaml weights unchanged, k=50 (paired validation bootstrap vs k=20 excludes 0). Do not edit.
+k: 50
+w_pass: 0.3
+w_wrong: 0.05
+w_err: 0.05
+trivial_pass_factor: 0.1
+multi_answer_neutral: true
+workers: 12
+stage1_config: configs/stage1_final.yaml

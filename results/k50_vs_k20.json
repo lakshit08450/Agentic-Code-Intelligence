@@ -1,0 +1,35 @@
+{
+ "frozen_weights": {
+  "w_pass": 0.3,
+  "w_wrong": 0.05,
+  "w_err": 0.05,
+  "trivial_pass_factor": 0.1,
+  "multi_answer_neutral": true
+ },
+ "n_queries": 344,
+ "w_ndcg_at_10": {
+  "20": 0.9224417768309335,
+  "50": 0.9444329770932763
+ },
+ "paired_weighted_bootstrap_k50_minus_k20_ndcg_at_10": {
+  "delta": 0.02199120026234296,
+  "ci_low": 0.0008282467858425995,
+  "ci_high": 0.05029969666956479,
+  "excludes_zero": true
+ },
+ "paired_weighted_bootstrap_k50_minus_k20_mrr_at_10": {
+  "delta": 0.02194132048679359,
+  "ci_low": 0.0007690206997088963,
+  "ci_high": 0.050227447553643424,
+  "excludes_zero": true
+ },
+ "paired_unweighted_bootstrap_k50_minus_k20_ndcg_at_10": {
+  "delta": 0.040386015292774344,
+  "ci_low": 0.0211100567068108,
+  "ci_high": 0.06256895062292393,
+  "excludes_zero": true
+ },
+ "queries_changed": 15,
+ "queries_improved": 15,
+ "queries_worse": 0
+}
