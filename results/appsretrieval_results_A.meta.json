@@ -1,13 +1,12 @@
 {
-  "config": "configs\\bakeoff\\gte_modernbert.yaml",
-  "config_name": "gte-modernbert-base",
-  "git_commit": "8706ac52a91896e392c93fa242af46026f8f1ea6",
-  "device_for_misses": "cpu",
+  "output": "A",
+  "config": "configs/stage1_final.yaml",
   "cache_stats": {
     "hits": 12519,
     "misses": 0
   },
-  "elapsed_s": 33.9,
+  "git_commit": "9eae056a039ef0d920662986ee3c484b1dbdc82d",
+  "elapsed_s": 24.9,
   "hardware": {
     "os": "Windows-10-10.0.26200-SP0",
     "cpu": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
@@ -18,9 +17,11 @@
     "mteb": "2.21.8"
   },
   "headline": {
-    "ndcg_at_10": 0.57738,
-    "mrr_at_10": 0.5296573494382248,
-    "recall_at_10": 0.72961,
-    "recall_at_100": 0.91873
+    "ndcg_at_10": 0.74641,
+    "mrr_at_10": 0.7004356120491573,
+    "recall_at_1": 0.60531,
+    "recall_at_10": 0.89031,
+    "recall_at_20": 0.93493,
+    "recall_at_100": 0.9838
   }
 }
