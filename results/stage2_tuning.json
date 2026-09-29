@@ -1,0 +1,156 @@
+{
+ "n_queries": 344,
+ "families_validation_stdin": {
+  "codechef_stdin": 194,
+  "codeforces_stdin": 104,
+  "no_samples_or_unknown": 6,
+  "atcoder_stdin": 30,
+  "other_stdin": 2,
+  "kattis_stdin": 2,
+  "codewars_call": 2,
+  "leetcode_call": 3,
+  "hackerrank_stdin": 1
+ },
+ "weights": "test_share/val_share, mean 1",
+ "stage1": {
+  "w_ndcg_at_10": 0.7827110573855897,
+  "w_mrr_at_10": 0.7323846230084535,
+  "ndcg_at_10": 0.7177622722956737,
+  "mrr_at_10": 0.6700650609080842
+ },
+ "best_by_k": {
+  "10": {
+   "config": {
+    "k": 10,
+    "w_pass": 0.3,
+    "w_wrong": 0.0,
+    "w_err": 0.05,
+    "trivial_pass_factor": 1.0,
+    "multi_answer_neutral": true,
+    "workers": 12,
+    "stage1_config": "configs/stage1_final.yaml"
+   },
+   "metrics": {
+    "k": 10,
+    "w_pass": 0.3,
+    "w_wrong": 0.0,
+    "w_err": 0.05,
+    "trivial_pass_factor": 1.0,
+    "w_ndcg_at_10": 0.9140894465737557,
+    "w_mrr_at_10": 0.9054881208448629,
+    "ndcg_at_10": 0.8438659345210885,
+    "mrr_at_10": 0.8364825581395349
+   },
+   "G3_ndcg_at_10": {
+    "delta": 0.13137838918816588,
+    "ci_low": 0.09480294725261185,
+    "ci_high": 0.16897649045400276,
+    "excludes_zero": true
+   },
+   "G3_mrr_at_10": {
+    "delta": 0.1731034978364093,
+    "ci_low": 0.12464677199954806,
+    "ci_high": 0.22285991196102467,
+    "excludes_zero": true
+   },
+   "unweighted_G3_ndcg_at_10": {
+    "delta": 0.12610366222541475,
+    "ci_low": 0.10257161578228498,
+    "ci_high": 0.15058433164610044,
+    "excludes_zero": true
+   },
+   "ablation_fix3_off_w_ndcg_at_10": 0.9140894465737557,
+   "ablation_fix4_off_w_ndcg_at_10": 0.9140894465737557
+  },
+  "20": {
+   "config": {
+    "k": 20,
+    "w_pass": 0.3,
+    "w_wrong": 0.05,
+    "w_err": 0.05,
+    "trivial_pass_factor": 0.1,
+    "multi_answer_neutral": true,
+    "workers": 12,
+    "stage1_config": "configs/stage1_final.yaml"
+   },
+   "metrics": {
+    "k": 20,
+    "w_pass": 0.3,
+    "w_wrong": 0.05,
+    "w_err": 0.05,
+    "trivial_pass_factor": 0.1,
+    "w_ndcg_at_10": 0.9224417768309335,
+    "w_mrr_at_10": 0.9137545888477296,
+    "ndcg_at_10": 0.8846696132449027,
+    "mrr_at_10": 0.8734738372093024
+   },
+   "G3_ndcg_at_10": {
+    "delta": 0.13973071944534377,
+    "ci_low": 0.10125833863993239,
+    "ci_high": 0.17928627157940474,
+    "excludes_zero": true
+   },
+   "G3_mrr_at_10": {
+    "delta": 0.18136996583927623,
+    "ci_low": 0.13182196491720385,
+    "ci_high": 0.23399228143851863,
+    "excludes_zero": true
+   },
+   "unweighted_G3_ndcg_at_10": {
+    "delta": 0.16690734094922893,
+    "ci_low": 0.13903692915828458,
+    "ci_high": 0.1960488566918916,
+    "excludes_zero": true
+   },
+   "ablation_fix3_off_w_ndcg_at_10": 0.9159047600561792,
+   "ablation_fix4_off_w_ndcg_at_10": 0.9201668463857344
+  },
+  "50": {
+   "config": {
+    "k": 50,
+    "w_pass": 0.3,
+    "w_wrong": 0.05,
+    "w_err": 0.05,
+    "trivial_pass_factor": 0.1,
+    "multi_answer_neutral": true,
+    "workers": 12,
+    "stage1_config": "configs/stage1_final.yaml"
+   },
+   "metrics": {
+    "k": 50,
+    "w_pass": 0.3,
+    "w_wrong": 0.05,
+    "w_err": 0.05,
+    "trivial_pass_factor": 0.1,
+    "w_ndcg_at_10": 0.9444329770932763,
+    "w_mrr_at_10": 0.9356959093345234,
+    "ndcg_at_10": 0.925055628537677,
+    "mrr_at_10": 0.9127180232558139
+   },
+   "G3_ndcg_at_10": {
+    "delta": 0.16172191970768673,
+    "ci_low": 0.11822334364137882,
+    "ci_high": 0.20564206975312574,
+    "excludes_zero": true
+   },
+   "G3_mrr_at_10": {
+    "delta": 0.2033112863260698,
+    "ci_low": 0.14948291990364018,
+    "ci_high": 0.25705769628306196,
+    "excludes_zero": true
+   },
+   "unweighted_G3_ndcg_at_10": {
+    "delta": 0.20729335624200323,
+    "ci_low": 0.1733502902317798,
+    "ci_high": 0.2386332457081489,
+    "excludes_zero": true
+   },
+   "ablation_fix3_off_w_ndcg_at_10": 0.937895960318522,
+   "ablation_fix4_off_w_ndcg_at_10": 0.9404646705591656
+  }
+ },
+ "chosen_for_test": {
+  "k": 20,
+  "passes_G3": true
+ }
+}

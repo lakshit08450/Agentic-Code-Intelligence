@@ -44,7 +44,10 @@ def program_mode(program: str) -> str:
     return "call" if _DEFINES_CALLABLE.search(program) else "stdin"
 
 
-def verify(statement: str, program: str, cache: ExecCache | None, case_insensitive: bool = False) -> Verdict:
+def verify(
+    statement: str, program: str, cache: ExecCache | None, case_insensitive: bool = False, cache_only: bool = False
+) -> Verdict:
+    """cache_only=True never executes anything: a missing run gives outcome MISSING (analysis/tuning)."""
     if program_mode(program) == "call":
         return Verdict("UNKNOWN", "call_program", 0)
     s = samples_for(statement)
@@ -52,7 +55,12 @@ def verify(statement: str, program: str, cache: ExecCache | None, case_insensiti
         return Verdict("UNKNOWN", {"none": "no_samples"}.get(s.kind, s.kind), 0)
     runs = 0
     for n, (inp, expected) in enumerate(s.pairs, 1):
-        r, hit = run_cached(cache, program, inp)
+        if cache_only:
+            r, hit = (cache.get(cache.key(program, inp)) if cache is not None else None), True
+            if r is None:
+                return Verdict("MISSING", f"sample_{n}_not_cached", 0)
+        else:
+            r, hit = run_cached(cache, program, inp)
         runs += 0 if hit else 1
         if r.status == "OK":
             if not outputs_match(r.stdout, expected, case_insensitive=case_insensitive):

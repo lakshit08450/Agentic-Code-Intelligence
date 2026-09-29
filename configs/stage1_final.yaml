@@ -1,0 +1,15 @@
+# FROZEN Stage 1 (29 Sep): identical to configs/bakeoff/qwen3_0p6b.yaml, chosen by the pre-declared
+# zero-shot test run (docs/LOG.md, step 3). Phase 3 ablations skipped: no query is truncated (max 1,861
+# tokens < 8,192) and time goes to Stage 2. Do not edit.
+name: qwen3-embedding-0.6b
+models:
+  - id: Qwen/Qwen3-Embedding-0.6B
+    revision: 97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3
+    query_prompt: "Instruct: Given a programming problem statement, retrieve the Python solution that solves it\nQuery:"
+    doc_prompt: ""
+    max_seq_length: 8192
+fusion_weights: [1.0]
+device: cpu
+batch_size: 4
+query_pre: {normalize_ws: false, strip_latex_dollar: false}
+doc_pre: {normalize_ws: false}

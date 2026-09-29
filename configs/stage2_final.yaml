@@ -1,0 +1,9 @@
+# FROZEN by tune_stage2.py (validation stdin subset, test-mix weighted, G3 passed). Do not edit.
+k: 20
+w_pass: 0.3
+w_wrong: 0.05
+w_err: 0.05
+trivial_pass_factor: 0.1
+multi_answer_neutral: true
+workers: 12
+stage1_config: configs/stage1_final.yaml
