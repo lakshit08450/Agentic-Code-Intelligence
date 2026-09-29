@@ -94,6 +94,9 @@ def main() -> None:
     if a.expect_a_ndcg is not None and round(a_head["ndcg_at_10"], 5) != round(a.expect_a_ndcg, 5):
         raise SystemExit(f"Output A ndcg_at_10 {a_head['ndcg_at_10']} != expected {a.expect_a_ndcg}: stopping before Output B")
 
+    from codeintel.eval.ceiling import _check_sandbox_ready
+
+    _check_sandbox_ready()  # all hostile-program tests must pass before any APPS code runs (plan 11.3)
     task_b = get_task(a.split).convert_to_reranking(pred, top_k=k)
     rr = ExecutionReranker(S2)
     pred_b = REPO_ROOT / "results" / "predictions" / f"{tag}stage2_exec"

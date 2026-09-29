@@ -1,0 +1,5 @@
+{
+  "mteb_B_stdin_subset_ndcg_at_10": 0.8846696132449027,
+  "tune_stage2_ndcg_at_10": 0.8846696132449027,
+  "abs_diff": 0.0
+}

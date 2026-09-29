@@ -266,3 +266,34 @@ Test labels were not opened. Test-side numbers use only mteb's saved scores and 
 
 ### Stage 2 preview (diagnostic, NOT a tuning run)
 `scripts/stage2_preview.py` -> `results/stage2_preview.json`: one fixed, untuned rule (cosine + 1.0 x PASS) on the 344 validation stdin queries, from the exec cache. NDCG@10 **0.718 -> 0.920** (+0.203, 95% CI [0.169, 0.235]); MRR@10 0.670 -> 0.907; rank-1 0.576 -> 0.875. The real selection remains the Section 11.5 grid with the G3 gate.
+
+## 2026-09-29 midday: start-up cause, Stage 2 tuning, freeze, end-to-end check
+
+### Start-up cost (P's decision)
+P reports McAfee real-time scanning off and Defender not running; no exclusions added. Evidence (bare `python.exe -c pass` 0.56 s vs `cmd.exe` 0.004 s; venv python 1.0 s) shows every python.exe launch is slow, so the cause is system-level (likely McAfee process monitoring or Smart App Control). Logged and accepted; current throughput about 4 runs/s. The runner's Job-Object wait (2 ms poll) is not the cause.
+
+### Fixes 3 and 4 (`src/codeintel/stage2/reranker.py`, tests `tests/test_reranker.py`)
+- Fix 3: `multi_answer_neutral` - no WRONG penalty when the statement accepts any valid answer (regex on statement text).
+- Fix 4: `trivial_pass_factor` - PASS weight multiplied by this factor when every sample output is a single trivial token.
+
+### Stage 2 grid + G3 (`python -m codeintel.eval.tune_stage2 --k-for-test 20`, commit d85063b)
+- Scope: 344 validation queries with stdin samples; exec cache only (no code executed). Queries weighted by test_share/val_share of their statement family (Codeforces 104 and AtCoder 30 queries carry most weight). Grid 162 configs: k {10,20,50} x w_pass {0.1,0.3,1.0} x w_wrong {0,0.05,0.1} x w_err {0,0.05} x trivial_pass_factor {1.0,0.5,0.1}; fix 3 on. Files: `results/stage2_grid.csv`, `results/stage2_tuning.json`.
+- Stage 1 (Qwen3) on this subset: weighted NDCG@10 0.7827, MRR@10 0.7324 (unweighted 0.7178 / 0.6701).
+
+| k | best config (w_pass, w_wrong, w_err, trivial) | weighted NDCG@10 | weighted MRR@10 | G3 weighted delta NDCG@10 [95% CI] | fix 3 off | fix 4 off |
+|---|---|---|---|---|---|---|
+| 10 | 0.3, 0, 0.05, 1.0 | 0.9141 | 0.9055 | +0.131 [0.095, 0.169] | 0.9141 | 0.9141 |
+| 20 | 0.3, 0.05, 0.05, 0.1 | **0.9224** | 0.9138 | **+0.140 [0.101, 0.179]** | 0.9159 | 0.9202 |
+| 50 | 0.3, 0.05, 0.05, 0.1 | 0.9444 | 0.9357 | +0.162 [0.118, 0.206] | 0.9379 | 0.9405 |
+
+- k for test: 20 (the run can start before 18:00; k=50 would need ~11 h). **G3 passes. Frozen `configs/stage2_final.yaml`**: k 20, w_pass 0.3, w_wrong 0.05, w_err 0.05, trivial_pass_factor 0.1, multi_answer_neutral true. **Frozen `configs/stage1_final.yaml`** = the Qwen3 bake-off config (Phase 3 ablations skipped: no query is truncated; time goes to Stage 2).
+
+### End-to-end two-stage check on validation (`python -m codeintel.eval.run_two_stage --split validation`)
+- mteb Output A (stage1_final, predictions saved) -> `convert_to_reranking(top_k=20)` -> `mteb.evaluate(ExecutionReranker)`. Validation Output B over all 1,000 queries: ndcg_at_10 0.89177, mrr_at_10 0.87510, recall_at_1 0.831 (call-based queries keep Stage 1 order).
+- On the stdin subset, mteb's Output B NDCG@10 = **0.8846696**, identical to tune_stage2 (abs diff 0.0). `results/validation_two_stage_check.json`.
+
+### PRE-DECLARATION: the single Stage 2 test run (P approved)
+- Command: `python -m codeintel.eval.run_two_stage --split test --expect-a-ndcg 0.74641` via bg.py (log `logs/test_two_stage.log`).
+- Step A: Output A with `configs/stage1_final.yaml` (identical to the logged Qwen3 zero-shot run), predictions saved to `results/predictions/stage1_qwen3`; the job stops if ndcg_at_10 != 0.74641.
+- Step B: the full sandbox suite must pass, then Output B = mteb two-stage with ExecutionReranker and frozen `configs/stage2_final.yaml` (k 20) -> `results/appsretrieval_results_B.json`.
+- Estimated work: 66,163 stdin pairs, about 4.6 h at 4 runs/s.
