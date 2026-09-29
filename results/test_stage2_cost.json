@@ -1,0 +1,18 @@
+{
+ "n_test_queries": 3765,
+ "k10": {
+  "pairs_to_execute": 33561,
+  "share_of_all_pairs": 0.8913944223107569,
+  "hours_at_4_runs_per_s": 2.35393125
+ },
+ "k20": {
+  "pairs_to_execute": 66163,
+  "share_of_all_pairs": 0.8786586985391767,
+  "hours_at_4_runs_per_s": 4.640599305555556
+ },
+ "k50": {
+  "pairs_to_execute": 162249,
+  "share_of_all_pairs": 0.8618804780876494,
+  "hours_at_4_runs_per_s": 11.379964583333333
+ }
+}

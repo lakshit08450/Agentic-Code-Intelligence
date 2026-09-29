@@ -1,0 +1,62 @@
+{
+ "n_stdin_queries": 344,
+ "rule": "cosine + 1.0*PASS (fixed, untuned; diagnostic)",
+ "stage1": {
+  "ndcg_at_10": 0.7177622722956737,
+  "mrr_at_10": 0.6700650609080842,
+  "recall_at_1": 0.5755813953488372
+ },
+ "stage2_preview": {
+  "ndcg_at_10": 0.9203291042459782,
+  "mrr_at_10": 0.9074404761904762,
+  "recall_at_1": 0.875
+ },
+ "bootstrap_ndcg_at_10": {
+  "delta": 0.2025668319503045,
+  "ci_low": 0.1689008060077595,
+  "ci_high": 0.2346992922134925,
+  "excludes_zero": true
+ },
+ "gold_outcome_by_family": {
+  "codechef_stdin": {
+   "PASS": 181,
+   "UNKNOWN": 5,
+   "WRONG": 6,
+   "ERROR": 3
+  },
+  "codeforces_stdin": {
+   "PASS": 85,
+   "UNKNOWN": 2,
+   "WRONG": 17
+  },
+  "no_samples_or_unknown": {
+   "PASS": 5,
+   "UNKNOWN": 100
+  },
+  "atcoder_stdin": {
+   "PASS": 24,
+   "UNKNOWN": 4,
+   "WRONG": 1,
+   "ERROR": 1
+  },
+  "leetcode_call": {
+   "UNKNOWN": 118,
+   "WRONG": 1
+  },
+  "other_stdin": {
+   "PASS": 2,
+   "UNKNOWN": 1
+  },
+  "kattis_stdin": {
+   "PASS": 1,
+   "UNKNOWN": 1
+  },
+  "codewars_call": {
+   "UNKNOWN": 420
+  },
+  "hackerrank_stdin": {
+   "UNKNOWN": 21,
+   "PASS": 1
+  }
+ }
+}

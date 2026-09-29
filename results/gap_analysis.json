@@ -1,0 +1,288 @@
+{
+ "note": "test side uses only mteb's saved scores and query texts (queries not in train qrels); no test qrels opened",
+ "1_stage1_loss_buckets": {
+  "test": {
+   "source": "mteb recall_at_k from results/test_qwen3_zeroshot.json (one relevant doc per query, CoIR); no qrels opened",
+   "recall_at_k": {
+    "1": 0.60531,
+    "3": 0.77185,
+    "5": 0.82895,
+    "10": 0.89031,
+    "20": 0.93493,
+    "100": 0.9838,
+    "1000": 0.99841
+   },
+   "rank_buckets": {
+    "1": 0.60531,
+    "2-10": 0.28500000000000003,
+    "11-20": 0.04461999999999999,
+    "21-100": 0.04886999999999997,
+    "101-1000": 0.014610000000000012,
+    ">1000": 0.0015899999999999803
+   },
+   "note": "mteb k_values are 1,3,5,10,20,100,1000, so the 11-50 / 51-100 split is not available on test"
+  },
+  "validation": {
+   "recall_at_k": {
+    "1": 0.738,
+    "10": 0.924,
+    "20": 0.956,
+    "50": 0.977,
+    "100": 0.987
+   },
+   "rank_buckets": {
+    "1": 0.738,
+    "2-10": 0.186,
+    "11-50": 0.053,
+    "51-100": 0.01,
+    ">100": 0.013
+   }
+  }
+ },
+ "2_token_lengths": {
+  "model": "Qwen/Qwen3-Embedding-0.6B",
+  "max_seq_length": 8192,
+  "query_prompt_tokens": 20,
+  "validation": {
+   "n": 1000,
+   "mean": 393.959,
+   "p50": 323.5,
+   "p90": 722.3000000000001,
+   "p99": 1257.1999999999998,
+   "max": 4046,
+   "share_over_512": 0.251,
+   "share_over_1024": 0.024,
+   "share_over_2048": 0.002,
+   "share_truncated_at_max_seq_length": 0.0
+  },
+  "test": {
+   "n": 3765,
+   "mean": 500.1179282868526,
+   "p50": 477.0,
+   "p90": 768.5999999999999,
+   "p99": 1138.3200000000015,
+   "max": 1861,
+   "share_over_512": 0.43266932270916336,
+   "share_over_1024": 0.020185922974767595,
+   "share_over_2048": 0.0,
+   "share_truncated_at_max_seq_length": 0.0
+  }
+ },
+ "3_format_mix": {
+  "validation": {
+   "atcoder_stdin": {
+    "n": 30,
+    "share": 0.03
+   },
+   "codechef_stdin": {
+    "n": 195,
+    "share": 0.195
+   },
+   "codeforces_stdin": {
+    "n": 104,
+    "share": 0.104
+   },
+   "codewars_call": {
+    "n": 420,
+    "share": 0.42
+   },
+   "hackerrank_stdin": {
+    "n": 22,
+    "share": 0.022
+   },
+   "kattis_stdin": {
+    "n": 2,
+    "share": 0.002
+   },
+   "leetcode_call": {
+    "n": 119,
+    "share": 0.119
+   },
+   "no_samples_or_unknown": {
+    "n": 105,
+    "share": 0.105
+   },
+   "other_stdin": {
+    "n": 3,
+    "share": 0.003
+   }
+  },
+  "validation_stdin_parser_kinds": {
+   "stdin": 344,
+   "call_based": 476,
+   "none": 170,
+   "parse_failure": 10
+  },
+  "test": {
+   "atcoder_stdin": {
+    "n": 696,
+    "share": 0.1848605577689243
+   },
+   "codechef_stdin": {
+    "n": 48,
+    "share": 0.012749003984063745
+   },
+   "codeforces_stdin": {
+    "n": 2936,
+    "share": 0.7798140770252324
+   },
+   "hackerrank_stdin": {
+    "n": 16,
+    "share": 0.004249667994687915
+   },
+   "kattis_stdin": {
+    "n": 2,
+    "share": 0.0005312084993359894
+   },
+   "leetcode_call": {
+    "n": 30,
+    "share": 0.00796812749003984
+   },
+   "no_samples_or_unknown": {
+    "n": 29,
+    "share": 0.007702523240371846
+   },
+   "other_stdin": {
+    "n": 8,
+    "share": 0.0021248339973439574
+   }
+  },
+  "test_stdin_parser_kinds": {
+   "stdin": 3686,
+   "none": 47,
+   "call_based": 19,
+   "parse_failure": 13
+  }
+ },
+ "4_call_parser_misses": {
+  "unparsed_call_based_validation": 339,
+  "sampled": 40,
+  "buckets_regex_heuristic": {
+   "other_language_syntax": 15,
+   "prose_examples": 13,
+   "other": 9,
+   "keyword_args": 2,
+   "tree_linked_list": 1
+  },
+  "buckets_manual_review_of_same_40": {
+   "prose_examples": 14,
+   "no_examples_in_text (empty/images/hackerrank)": 13,
+   "named_variables_multiline_output_or_expression_args": 5,
+   "fixable_parser_gap (call and result on separate lines, 'Testing:'/'For instance:' prefix)": 4,
+   "other_language_syntax": 3,
+   "keyword_args": 1,
+   "tree_linked_list": 0,
+   "in_place": 0
+  },
+  "note": "the regex heuristic over-counts other-language syntax; the manual review of the same 40 is authoritative"
+ },
+ "5_gold_failures": {
+  "counts": {
+   "call_based_harness_not_built": 606,
+   "unknown_no_samples": 32,
+   "unknown_call_based": 20,
+   "multiple_valid_answers": 16,
+   "genuine_mismatch_or_label_noise": 12,
+   "unknown_py2_syntax": 7,
+   "unknown_parse_failure": 4,
+   "unknown_nonstdlib": 3,
+   "version_removed_api": 1
+  },
+  "example_query_ids": {
+   "unknown_py2_syntax": "q1120",
+   "genuine_mismatch_or_label_noise": "q1163",
+   "call_based_harness_not_built": "q123",
+   "unknown_nonstdlib": "q1400",
+   "multiple_valid_answers": "q1562",
+   "unknown_call_based": "q1724",
+   "unknown_parse_failure": "q1821",
+   "unknown_no_samples": "q1850",
+   "version_removed_api": "q965"
+  },
+  "static_scan_all_1000_gold": {
+   "gold_with_version_removed_api": 4,
+   "gold_with_linux_only_import": 0
+  }
+ },
+ "7_throughput": {
+  "pairs_top50": 50000,
+  "breakdown": {
+   "skip_no_samples_or_examples": {
+    "n": 18950,
+    "share": 0.379
+   },
+   "run_stdin": {
+    "n": 15808,
+    "share": 0.31616
+   },
+   "run_call": {
+    "n": 5131,
+    "share": 0.10262
+   },
+   "skip_function_name_mismatch": {
+    "n": 4431,
+    "share": 0.08862
+   },
+   "skip_mode_mismatch_call_statement_stdin_program": {
+    "n": 4288,
+    "share": 0.08576
+   },
+   "skip_mode_mismatch_stdin_statement_call_program": {
+    "n": 1392,
+    "share": 0.02784
+   }
+  },
+  "share_skippable_without_running": 0.58122,
+  "stdin_runs_per_executed_pair_early_stop": 1.0095521255060729,
+  "stdin_samples_per_executed_pair": 1.2320976720647774,
+  "projected_gain_all_samples_in_one_process": {
+   "processes_per_executed_stdin_pair_now": 1.0095521255060729,
+   "processes_per_pair_if_batched": 1.0,
+   "projected_speedup": 1.0095521255060729,
+   "note": "wrong candidates almost always fail on sample 1, so batching samples gains ~1%; per-process start-up (~0.56 s CreateProcess for python.exe) dominates"
+  },
+  "test_cost": {
+   "n_test_queries": 3765,
+   "k10": {
+    "pairs_to_execute": 33561,
+    "share_of_all_pairs": 0.8913944223107569,
+    "hours_at_4_runs_per_s": 2.35393125
+   },
+   "k20": {
+    "pairs_to_execute": 66163,
+    "share_of_all_pairs": 0.8786586985391767,
+    "hours_at_4_runs_per_s": 4.640599305555556
+   },
+   "k50": {
+    "pairs_to_execute": 162249,
+    "share_of_all_pairs": 0.8618804780876494,
+    "hours_at_4_runs_per_s": 11.379964583333333
+   }
+  }
+ },
+ "6_false_passes": {
+  "queries_with_missing_runs": 0,
+  "trivial_output": {
+   "queries": 62,
+   "share_gold_in_top50": 0.9193548387096774,
+   "share_gold_passes": 0.8548387096774194,
+   "share_any_nongold_pass": 0.5645161290322581,
+   "share_any_nongold_pass_excl_exact_duplicates": 0.5645161290322581,
+   "share_gold_pass_and_a_nongold_pass": 0.46774193548387094,
+   "mean_nongold_passes_per_query": 1.7096774193548387
+  },
+  "nontrivial_output": {
+   "queries": 282,
+   "share_gold_in_top50": 0.9787234042553191,
+   "share_gold_passes": 0.8404255319148937,
+   "share_any_nongold_pass": 0.1099290780141844,
+   "share_any_nongold_pass_excl_exact_duplicates": 0.1099290780141844,
+   "share_gold_pass_and_a_nongold_pass": 0.10283687943262411,
+   "mean_nongold_passes_per_query": 0.16666666666666666
+  }
+ },
+ "companion_files": [
+  "results/stage2_preview.json",
+  "results/test_stage2_cost.json"
+ ]
+}
