@@ -297,3 +297,12 @@ P reports McAfee real-time scanning off and Defender not running; no exclusions 
 - Step A: Output A with `configs/stage1_final.yaml` (identical to the logged Qwen3 zero-shot run), predictions saved to `results/predictions/stage1_qwen3`; the job stops if ndcg_at_10 != 0.74641.
 - Step B: the full sandbox suite must pass, then Output B = mteb two-stage with ExecutionReranker and frozen `configs/stage2_final.yaml` (k 20) -> `results/appsretrieval_results_B.json`.
 - Estimated work: 66,163 stdin pairs, about 4.6 h at 4 runs/s.
+
+### Stage 2 test run (started 12:11, pid in logs/test_two_stage.log.pid)
+- Output A reproduced exactly: ndcg_at_10 **0.74641**, mrr_at_10 0.70044 (same as the zero-shot run); `results/appsretrieval_results_A.json` now holds this Qwen3 Output A (the gte-modernbert v0 file is superseded; its numbers stay in this log). Predictions saved to `results/predictions/stage1_qwen3/`.
+- Sandbox suite inside the job: 33 passed. Output B in progress: 75,300 pairs (3,765 x k=20; UNKNOWN pairs cost nothing). Progress at 13:56: 19,000 pairs in 103 min (~3.1 pairs/s while Path B was being developed on the same CPU); ETA ~19:05.
+
+## Path B (P1 --rev first, then Bonus --range), commit a59bd00
+- `src/codeintel/versioned/`: `units.py` (files > 300 lines -> 80-line windows, 20 overlap), `ingest.py` (git first-parent revisions with `git diff -M` rename detection, snapshot dirs, JSONL), `store.py` (index.sqlite per plan 12.2 plus `units.key` and a `snippets` table; vectors.npy; incremental add_version: embed only missing emb_keys, close changed/vanished revisions, identity by key, git rename, or unchanged content moved), `search.py` (`search_rev`, `search_range` with best revision per unit (ties -> most recent), versions matched, history introduced/modified/removed; optional `--verify` Stage 2 re-rank), `cli.py` (index / search --rev / search --range / versions; CPU default).
+- `tests/test_versioned.py`: 5 passed (tiny git repo v1-v3 with add/rename/modify/remove; JSONL and snapshot sources; windowing).
+- Not yet done: `scripts/simulate_versions.py` and the Section 12.5 metrics / CPU latency (they need the CPU; scheduled after the test job).
