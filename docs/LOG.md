@@ -357,3 +357,17 @@ Command: `python -m codeintel.eval.run_two_stage --split test --reuse-a --stage2
 
 ### Step 5 (authorised by P's step 5 because step 3 passed G3): fusion Output A, single test run
 Command: `python -m codeintel.eval.run_mteb --config configs/fusion/qwen3_gemma_w0.3.yaml --require-cache --out results/appsretrieval_results_A_fusion.json --prediction-folder results/predictions/stage1_fusion` (CPU, vectors from cache).
+- Result: **ndcg_at_10 0.8702**, mrr_at_10 0.83998, recall_at_10 0.96335, recall_at_100 0.99655; cache 25,038 hits / 0 misses; 28.6 s. File `results/appsretrieval_results_A_fusion.json`, predictions `results/predictions/stage1_fusion/`.
+### Step 4: fusion + Stage 2 on validation (`scripts/fusion_stage2_eval.py` -> `results/fusion_stage2.json`)
+- New validation executions for fusion candidates: `ceiling topk --model fusion-qwen3-gemma-w0.3 --k 50` (`logs/stage2_val_fusion.log`), 7,087 new runs, 26.1 min at 4.4 runs/s; sandbox suite passed first. Exec cache 182,339 runs.
+- Frozen Stage 2 weights, 344 validation stdin queries, test-mix weighted:
+
+| k | Qwen3+S2 NDCG@10 | fusion+S2 NDCG@10 | paired delta [95% CI] | better / worse queries |
+|---|---|---|---|---|
+| 50 | 0.9444 | 0.9646 | +0.0201 [-0.0027, 0.0496] | 20 / 11 |
+| 20 (reference) | 0.9224 | 0.9612 | +0.0387 [0.0085, 0.0771] | 29 / 10 |
+
+- **Condition (a) at k=50 FAILS** (CI includes 0). Step 6 was conditional on step 4 (defined at k=50); its k=20 fallback applies only when k=50 cannot finish in time. **Decision: no fusion Output B test run. Per the 03:17 pre-declaration, the k=50 Qwen3 Output B (`results/appsretrieval_results_B_k50.json`, NDCG@10 0.91274) is final.**
+- Disclosure: the fusion Output A test run (step 5, 0.8702) was made and is reported, but it is not a submission.
+### Step 6 cost estimate (for the record; not started)
+Uncached fusion test pairs: k=50 75,601 (~4.2 h at the ~5 runs/s of the last test run), k=20 14,617.

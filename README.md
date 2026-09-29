@@ -38,6 +38,7 @@ solution  ──► Qwen3-Embedding-0.6B ──┘                      run each
 | A | Qwen3-Embedding-0.6B (encoder only) | 0.74641 | 0.70044 | `results/appsretrieval_results_A.json` |
 | B (k=20) | + execution re-ranking | 0.8938 | 0.8812 | `results/appsretrieval_results_B.json` |
 | B (k=50, pre-declared final) | + execution re-ranking | 0.91274 | 0.89804 | `results/appsretrieval_results_B_k50.json` |
+| A (fusion Qwen3 + EmbeddingGemma, w=0.3; disclosed, not submitted) | encoder only | 0.8702 | 0.8400 | `results/appsretrieval_results_A_fusion.json` |
 
 Harness check (G1), same pipeline: e5-base-v2 0.11532 (published 0.115), gte-modernbert-base 0.57738
 (published 0.564). Files `results/g1_e5_base_v2.json`, `results/test_qwen3_zeroshot.json`.
