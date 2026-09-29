@@ -354,3 +354,6 @@ Command: `python -m codeintel.eval.run_two_stage --split test --reuse-a --stage2
 - Rule (P): pick w by stdin-weighted recall@k -> recall@50 first, recall@20 tie-break: **w = 0.3** (`configs/fusion/qwen3_gemma_w0.3.yaml`).
 - G3 vs Qwen3 alone (stdin subset, test-mix weighted, paired bootstrap 1,000): recall@50 **+0.0228 [0.0004, 0.0492]**, recall@20 +0.0371 [0.0086, 0.0723], NDCG@10 +0.0910 [0.0488, 0.1322]. **G3 passes** (recall@50 CI barely excludes 0).
 - Notes: w=0.3 is at the edge of the pre-set grid, and Gemma alone has higher stdin recall@50 (0.998) than any fusion; the grid was not extended (P's grid). Gemma is much stronger on the Codeforces/AtCoder-like stdin subset than on all validation queries (the call-based ones), consistent with the source-mix shift.
+
+### Step 5 (authorised by P's step 5 because step 3 passed G3): fusion Output A, single test run
+Command: `python -m codeintel.eval.run_mteb --config configs/fusion/qwen3_gemma_w0.3.yaml --require-cache --out results/appsretrieval_results_A_fusion.json --prediction-folder results/predictions/stage1_fusion` (CPU, vectors from cache).
