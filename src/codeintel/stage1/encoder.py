@@ -77,8 +77,10 @@ class SentenceTransformerBackend:
         if m.trust_remote_code:  # remote code written for transformers 4.x
             _patch_extended_attention_mask(self.model)
         self.model.max_seq_length = m.max_seq_length
-        if device.startswith("cuda") and fp16_on_cuda:
-            self.model.half()
+        if device.startswith("cuda") and fp16_on_cuda and m.cuda_dtype != "float32":
+            import torch
+
+            self.model.to(getattr(torch, m.cuda_dtype))  # e.g. EmbeddingGemma does not support float16
         self.batch_size = batch_size
         self.attn_budget = attn_budget
         log.info("loaded %s rev=%s device=%s max_seq_length=%d", m.id, m.revision, device, m.max_seq_length)

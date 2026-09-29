@@ -21,6 +21,7 @@ class ModelCfg:
     doc_prompt: str = ""
     max_seq_length: int = 512
     trust_remote_code: bool = False
+    cuda_dtype: str = "float16"  # GPU encode precision (float16 | bfloat16 | float32); not part of the fingerprint
 
     def fingerprint(self) -> str:
         """Everything that changes the vector for a given preprocessed text.
@@ -28,7 +29,7 @@ class ModelCfg:
         Device and dtype are deliberately excluded: the GPU fills the cache and the CPU
         run reads it; the CPU equivalence check (plan Section 6) guards that choice.
         """
-        return fingerprint({k: v for k, v in asdict(self).items() if k != "trust_remote_code"})
+        return fingerprint({k: v for k, v in asdict(self).items() if k not in ("trust_remote_code", "cuda_dtype")})
 
 
 @dataclass

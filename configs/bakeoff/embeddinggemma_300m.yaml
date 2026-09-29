@@ -1,0 +1,15 @@
+# Fusion candidate. Model card "Code Retrieval" prompts: query "task: code retrieval | query: ",
+# documents "title: none | text: " (title unknown). Max context 2,048 tokens. No float16 (card): bf16 on GPU.
+name: embeddinggemma-300m
+models:
+  - id: google/embeddinggemma-300m
+    revision: 57c266a740f537b4dc058e1b0cda161fd15afa75
+    query_prompt: "task: code retrieval | query: "
+    doc_prompt: "title: none | text: "
+    max_seq_length: 2048
+    cuda_dtype: bfloat16
+fusion_weights: [1.0]
+device: cpu
+batch_size: 16
+query_pre: {normalize_ws: false, strip_latex_dollar: false}
+doc_pre: {normalize_ws: false}

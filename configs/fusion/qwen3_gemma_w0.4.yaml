@@ -1,0 +1,19 @@
+# Fusion: Qwen3 (weight 0.4) + EmbeddingGemma (0.6); cosine = 0.4*cos_qwen3 + 0.6*cos_gemma (plan Section 5).
+name: fusion-qwen3-gemma-w0.4
+models:
+  - id: Qwen/Qwen3-Embedding-0.6B
+    revision: 97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3
+    query_prompt: "Instruct: Given a programming problem statement, retrieve the Python solution that solves it\nQuery:"
+    doc_prompt: ""
+    max_seq_length: 8192
+  - id: google/embeddinggemma-300m
+    revision: 57c266a740f537b4dc058e1b0cda161fd15afa75
+    query_prompt: "task: code retrieval | query: "
+    doc_prompt: "title: none | text: "
+    max_seq_length: 2048
+    cuda_dtype: bfloat16
+fusion_weights: [0.4, 0.6]
+device: cpu
+batch_size: 4
+query_pre: {normalize_ws: false, strip_latex_dollar: false}
+doc_pre: {normalize_ws: false}
