@@ -25,3 +25,11 @@ def test_integers_exact():
 def test_case_sensitivity_optional():
     assert not outputs_match("yes", "YES")
     assert outputs_match("yes", "YES", case_insensitive=True)
+
+
+def test_huge_integers_do_not_crash():
+    # regression: int() raised ValueError on a 101,110-digit token and killed the Stage 2 run
+    big = "7" * 101_110
+    assert outputs_match(big, big)
+    assert not outputs_match(big, "7" * 101_109 + "8")
+    assert outputs_match("-0", "0") and outputs_match("007", "7") and not outputs_match("-5", "5")
