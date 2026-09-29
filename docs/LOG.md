@@ -335,3 +335,22 @@ Command: `python -m codeintel.eval.run_two_stage --split test --reuse-a --stage2
 - **ndcg_at_10 0.91274, mrr_at_10 0.89804**, recall_at_1 0.86135, recall_at_10 0.95750, recall_at_20 0.96282, recall_at_100 0.96574.
 - Stage 2 outcomes over 188,250 pairs: ERROR 86,706, WRONG 57,530, UNKNOWN 39,328, PASS 4,294, TIMEOUT 392.
 - Test summary: Output A 0.74641 / 0.70044; Output B k=20 0.8938 / 0.8812; Output B k=50 0.91274 / 0.89804. Per the 17:31 and 03:17 pre-declarations, k=50 Output B is the default submission (fusion condition pending).
+
+## 2026-09-30 fusion work (pre-declared at 03:17; idea from another team's public README, no code/weights used)
+### Step 1: EmbeddingGemma-300m (commit 24c51b3)
+- `google/embeddinggemma-300m` rev 57c266a7 (Gemma license; HF terms accepted by P). Card "Code Retrieval" prompts: query `task: code retrieval | query: `, documents `title: none | text: `; max 2,048 tokens; card says no float16, so bfloat16 on GPU via a new per-model `cuda_dtype` (excluded from the cache fingerprint; Qwen3 cache key unchanged, b72b732e). No packages installed (transformers 5.17 loads it). Tests 79 passed (smoke test fixed to also accept Stage 2 configs).
+### Step 2: GPU encode
+`scripts/encode.py --config configs/bakeoff/embeddinggemma_300m.yaml --device cuda` (`logs/encode_gemma.log`): corpus 8,738 new texts at 100.6/s, queries 8,749 at 66.4/s (RTX 5060, bf16).
+### Step 3: Stage 1 fusion on validation (`scripts/fusion_eval.py` -> `results/fusion_stage1.json`; top-100 via `bakeoff metrics`, all cache hits)
+| model | all: NDCG@10 | MRR@10 | R@10 | R@20 | R@50 | stdin-weighted: NDCG@10 | R@10 | R@20 | R@50 |
+|---|---|---|---|---|---|---|---|---|---|
+| Qwen3 | 0.8344 | 0.8051 | 0.924 | 0.956 | 0.977 | 0.7827 | 0.940 | 0.949 | 0.971 |
+| EmbeddingGemma | 0.7456 | 0.7090 | 0.859 | 0.904 | 0.940 | 0.8247 | 0.954 | 0.969 | 0.998 |
+| fusion w=0.3 (Qwen3 weight) | 0.8619 | 0.8354 | 0.944 | 0.967 | 0.983 | 0.8738 | 0.978 | 0.986 | 0.994 |
+| fusion w=0.4 | 0.8743 | 0.8499 | 0.949 | 0.973 | 0.982 | 0.8793 | 0.963 | 0.986 | 0.986 |
+| fusion w=0.5 | 0.8785 | 0.8537 | 0.954 | 0.970 | 0.985 | 0.8725 | 0.963 | 0.985 | 0.986 |
+| fusion w=0.6 | 0.8814 | 0.8575 | 0.954 | 0.968 | 0.985 | 0.8640 | 0.962 | 0.970 | 0.986 |
+| fusion w=0.7 | 0.8775 | 0.8541 | 0.949 | 0.968 | 0.984 | 0.8418 | 0.956 | 0.970 | 0.986 |
+- Rule (P): pick w by stdin-weighted recall@k -> recall@50 first, recall@20 tie-break: **w = 0.3** (`configs/fusion/qwen3_gemma_w0.3.yaml`).
+- G3 vs Qwen3 alone (stdin subset, test-mix weighted, paired bootstrap 1,000): recall@50 **+0.0228 [0.0004, 0.0492]**, recall@20 +0.0371 [0.0086, 0.0723], NDCG@10 +0.0910 [0.0488, 0.1322]. **G3 passes** (recall@50 CI barely excludes 0).
+- Notes: w=0.3 is at the edge of the pre-set grid, and Gemma alone has higher stdin recall@50 (0.998) than any fusion; the grid was not extended (P's grid). Gemma is much stronger on the Codeforces/AtCoder-like stdin subset than on all validation queries (the call-based ones), consistent with the source-mix shift.
