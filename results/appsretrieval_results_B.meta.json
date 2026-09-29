@@ -1,0 +1,32 @@
+{
+  "output": "B",
+  "config": "configs/stage2_final.yaml",
+  "stage1_config": "configs/stage1_final.yaml",
+  "k": 20,
+  "outcome_counts": {
+    "UNKNOWN": 14789,
+    "ERROR": 31215,
+    "WRONG": 25575,
+    "PASS": 3565,
+    "TIMEOUT": 156
+  },
+  "git_commit": "386ca85055939600ae45418de64a7cdabac8569f",
+  "elapsed_s": 23888.1,
+  "hardware": {
+    "os": "Windows-10-10.0.26200-SP0",
+    "cpu": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
+    "cores_physical": 8,
+    "cores_logical": 16,
+    "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "torch": "2.11.0+cu128",
+    "mteb": "2.21.8"
+  },
+  "headline": {
+    "ndcg_at_10": 0.8938,
+    "mrr_at_10": 0.8812325301966744,
+    "recall_at_1": 0.84861,
+    "recall_at_10": 0.93174,
+    "recall_at_20": 0.93493,
+    "recall_at_100": 0.93493
+  }
+}

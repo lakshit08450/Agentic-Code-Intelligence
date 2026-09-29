@@ -36,7 +36,7 @@ solution  ──► Qwen3-Embedding-0.6B ──┘                      run each
 | Output | Model | NDCG@10 | MRR@10 | File |
 |---|---|---|---|---|
 | A | Qwen3-Embedding-0.6B (encoder only) | 0.74641 | 0.70044 | `results/appsretrieval_results_A.json` |
-| B (k=20) | + execution re-ranking | [pending] | [pending] | `results/appsretrieval_results_B.json` |
+| B (k=20) | + execution re-ranking | 0.8938 | 0.8812 | `results/appsretrieval_results_B.json` |
 | B (k=50, pre-declared final) | + execution re-ranking | [pending] | [pending] | `results/appsretrieval_results_B_k50.json` |
 
 Harness check (G1), same pipeline: e5-base-v2 0.11532 (published 0.115), gte-modernbert-base 0.57738
