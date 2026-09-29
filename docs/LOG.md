@@ -329,3 +329,9 @@ Command: `python scripts/k50_vs_k20.py` -> `results/k50_vs_k20.json` (exec cache
 
 **PRE-DECLARATION (text given by P, logged before the k=50 score was seen):**
 "The k=50 Output B completed before 07:00, so it is the default submission. Fusion-based Output B (Qwen3 + EmbeddingGemma in Stage 1, frozen Stage 2 weights) replaces it only if (a) fusion+Stage2 beats Qwen3+Stage2 on validation at the same k with a paired-bootstrap 95% CI excluding 0, and (b) its single test run completes by 12:00 Wed. Otherwise k=50 Output B is final, regardless of any score comparison on test. The fusion idea came from another team's public README; no code or weights were used from it, and all choices come from our validation only."
+
+## k=50 Output B test result (read after the pre-declaration above was committed, cbf357a)
+Command: `python -m codeintel.eval.run_two_stage --split test --reuse-a --stage2-config configs/stage2_final_k50.yaml --out-suffix _k50`; commit at job start bc19519; CPU Ryzen 9 270; 19,372 s total. Files `results/appsretrieval_results_B_k50.json` (+ `.meta.json`).
+- **ndcg_at_10 0.91274, mrr_at_10 0.89804**, recall_at_1 0.86135, recall_at_10 0.95750, recall_at_20 0.96282, recall_at_100 0.96574.
+- Stage 2 outcomes over 188,250 pairs: ERROR 86,706, WRONG 57,530, UNKNOWN 39,328, PASS 4,294, TIMEOUT 392.
+- Test summary: Output A 0.74641 / 0.70044; Output B k=20 0.8938 / 0.8812; Output B k=50 0.91274 / 0.89804. Per the 17:31 and 03:17 pre-declarations, k=50 Output B is the default submission (fusion condition pending).
