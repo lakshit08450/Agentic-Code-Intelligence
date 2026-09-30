@@ -1,2 +1,5 @@
 # demo statements must stay byte-exact (no line-ending conversion)
 docs/demo_queries/*.txt -text
+
+# demo statements served by the frontend must stay byte-exact
+webapp/frontend/public/demo_queries/*.txt -text

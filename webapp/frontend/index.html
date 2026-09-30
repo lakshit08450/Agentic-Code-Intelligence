@@ -531,6 +531,14 @@
         </div>
       </form>
       <div id="modelStatus" style="font-size: 0.85rem; margin: 0.25rem 0 0.75rem; opacity: 0.85;">&#9676; checking the PRISM model server&hellip;</div>
+      <div id="demoLoaders" style="font-size: 0.8rem; margin: 0 0 0.75rem; display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;">
+        <span style="opacity: 0.8;">Load demo problem (APPS validation):</span>
+        <button type="button" class="sticker demo-load" data-id="q2264" style="padding: 0.2rem 0.5rem;">q2264 AtCoder</button>
+        <button type="button" class="sticker demo-load" data-id="q2013" style="padding: 0.2rem 0.5rem;">q2013 Codeforces</button>
+        <button type="button" class="sticker demo-load" data-id="q2192" style="padding: 0.2rem 0.5rem;">q2192 Codeforces</button>
+        <button type="button" class="sticker demo-load" data-id="q2075" style="padding: 0.2rem 0.5rem;">q2075 Codeforces</button>
+        <button type="button" class="sticker demo-load" data-id="q2272" style="padding: 0.2rem 0.5rem;">q2272 AtCoder</button>
+      </div>
 
       <div id="searchContent">
         <!-- Welcome State -->
@@ -794,6 +802,24 @@ Output
     };
     pollModel();
 
+    // Demo problems: load the exact statement file (byte-exact copy of the dataset text) into the query box
+    document.querySelectorAll('.demo-load').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        try {
+          const res = await fetch(`/demo_queries/${btn.dataset.id}.txt`, { cache: 'no-store' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const text = await res.text();
+          els.query.value = text;
+          setDataset('apps');
+          els.query.focus();
+          els.query.scrollTop = 0;
+          showMsg(`Loaded ${btn.dataset.id}: ${text.length} characters, ${text.split(/\r?\n/).length} lines`);
+        } catch (e) {
+          showMsg(`Could not load ${btn.dataset.id}: ${e.message}`);
+        }
+      });
+    });
+
     const STAGE2 = {
       PASS: ['&#10003; passed sample tests', '#d8f0d2', '#1f5e14'],
       WRONG: ['&#10007; wrong output on samples', '#f6dcd4', '#7a2412'],
@@ -962,7 +988,8 @@ Output
           notice = `<span style="background:#f3ead0;color:#6b5310;padding:2px 8px;border-radius:6px">${FALLBACK_TEXT.not_applicable}</span>`;
         }
         const split = isPrism ? ` (Stage 1 ${((t.encode + t.search) / 1000).toFixed(2)} s &middot; Stage 2 ${(t.verify / 1000).toFixed(2)} s)` : '';
-        els.answer.innerHTML = `Found ${data.length} results in ${(latency / 1000).toFixed(2)} s${split}.<br>${notice}`;
+        const sentInfo = `<span style="opacity:0.7;font-size:0.8rem">query sent: ${q.length} characters &middot; ${q.split(/\r?\n/).length} lines</span>`;
+        els.answer.innerHTML = `Found ${data.length} results in ${(latency / 1000).toFixed(2)} s${split}.<br>${notice}<br>${sentInfo}`;
         els.answer.classList.remove('hidden');
         renderResults(data);
         els.resultPicker.classList.remove('hidden');
