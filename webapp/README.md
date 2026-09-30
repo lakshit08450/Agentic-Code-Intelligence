@@ -44,6 +44,9 @@ shows `"ready": true` and the datasets. `PRISM_API_URL` overrides the PRISM serv
 3. **Version**: dataset "Demo repo @ v2", query "parse sample input and output pairs from a problem statement".
 4. **All versions**: dataset "Demo repo, all versions v1..v4", query "run an untrusted program in a sandbox
    with a time limit" - one result per file with its version history.
+5. **Uploaded repo**: "Index Repo" -> pick a small JS/TS folder; after "Repository indexed", choose dataset
+   "Uploaded repo (main)" and ask e.g. "Where is the auth middleware that validates tokens?". Chunks are embedded
+   by PRISM `/embed` (fused, 1,792-d); a notice says "Stage 2 not applicable (Python only)".
 
 ## What is CodeLens?
 
