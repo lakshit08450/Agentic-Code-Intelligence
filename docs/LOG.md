@@ -380,3 +380,11 @@ Statement given by P (logged verbatim before the run):
 - 09:45 statement given by P (logged verbatim while the fusion k=50 job runs): "Fusion + Stage 2 k=20 is reported as an ablation only and is not eligible for submission (k=50 beat k=20 on validation for both pipelines). The primary submission is still the higher of the two k=50 runs."
 - Plan after the k=50 job finishes or is stopped at 15:00: run any missing fusion top-20 pairs, then mteb for fusion k=20 from cache -> `results/appsretrieval_results_B_fusion_k20.json` (ablation row only).
 - Fusion k=50 job: pid 23944, started 09:41; sandbox suite 33 passed; first progress 09:44:49, 1,000/188,250 pairs.
+
+## 2026-09-30 09:50 CPU equivalence check (plan Section 6 / Phase 1.4) - FAILS the 1e-3 criterion
+Command: `python scripts/cpu_check.py --config <cfg> --threads 4` (200 random corpus docs + 50 random validation queries, seed 13; CPU fp32 vs the GPU-filled cache; run while the fusion k=50 job was running, 4 torch threads). Files `results/cpu_check_qwen3-embedding-0.6b.json`, `results/cpu_check_embeddinggemma-300m.json`.
+| model (GPU cache dtype) | max abs cos diff | mean abs cos diff | min self-cos (CPU vs GPU vector) | top-10 order mismatched queries | top-10 set mismatched | CPU encode s |
+|---|---|---|---|---|---|---|
+| Qwen3-Embedding-0.6B (fp16) | 0.00914 | 0.00135 | 0.99974 (q) / 0.99974 (d) | 24 / 50 | 3 / 50 | 116.6 |
+| EmbeddingGemma-300m (bf16) | 0.00513 | 0.00085 | 0.99986 (q) / 0.99929 (d) | 31 / 50 | 4 / 50 | 97.6 |
+- Criterion (max diff < 1e-3 and identical top-10 order) FAILS for both. Cause: reduced-precision GPU encodes (fp16 / bf16) vs fp32 on CPU; vectors agree to >= 0.9993 cosine, but near-ties among the 200 random docs reorder. Consequence: a CPU re-encode reproduces the submitted JSONs only approximately. Not fixed (needs P's decision: e.g. re-encode the caches in fp32 on the GPU, re-run the check, and disclose; or state the tolerance in the README).

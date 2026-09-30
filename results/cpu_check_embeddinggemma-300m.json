@@ -1,0 +1,14 @@
+{
+  "config": "configs/bakeoff/embeddinggemma_300m.yaml",
+  "model": "google/embeddinggemma-300m",
+  "n_docs": 200,
+  "n_queries": 50,
+  "max_abs_cos_diff": 0.005134165287017822,
+  "mean_abs_cos_diff": 0.0008492465713061392,
+  "min_self_cos_query": 0.999862015247345,
+  "min_self_cos_doc": 0.9992893934249878,
+  "top10_mismatched_queries": 31,
+  "top10_set_mismatched_queries": 4,
+  "cpu_encode_seconds": 97.6,
+  "pass": false
+}

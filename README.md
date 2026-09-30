@@ -148,8 +148,11 @@ k=50 pipelines (Qwen3 or fusion Stage 1, same frozen Stage 2) by test NDCG@10 (d
 All other choices (models, preprocessing, fusion weight, Stage 2 weights and depth) were made on the
 validation split carved from APPS train (seed 13). Test qrels were only read inside
 `mteb.evaluate`. Scoring never reads IDs or metadata (`tests/test_no_id_leak.py`).
-Development encodes used an RTX 5060 GPU (fp16); the submitted pipeline defaults to CPU. A CPU
-equivalence spot-check is [pending].
+Development encodes used an RTX 5060 GPU (Qwen3 fp16, EmbeddingGemma bf16); the submitted pipeline defaults
+to CPU. CPU equivalence spot-check (200 docs, 50 queries): CPU fp32 and GPU vectors agree to cosine >= 0.9993,
+but query-document cosines differ by up to 0.009 (Qwen3) / 0.005 (Gemma), which reorders near-ties; the
+plan's 1e-3 criterion is **not met** (`results/cpu_check_*.json`). A CPU re-encode therefore reproduces the
+submitted scores only approximately.
 
 ## 9. Tests
 `.venv\Scripts\python -m pytest -q` (sandbox, parser, comparator, reranker, ID-leak, versioned store).

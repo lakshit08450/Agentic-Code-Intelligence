@@ -25,7 +25,12 @@ def main() -> None:
     ap.add_argument("--config", required=True)
     ap.add_argument("--docs", type=int, default=200)
     ap.add_argument("--queries", type=int, default=50)
+    ap.add_argument("--threads", type=int, default=None, help="torch CPU threads (limit while other jobs run)")
     a = ap.parse_args()
+    if a.threads:
+        import torch
+
+        torch.set_num_threads(a.threads)
 
     cfg = load_cfg(a.config)
     cfg.on_cache_miss = "error"

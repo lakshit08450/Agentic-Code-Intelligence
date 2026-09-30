@@ -1,0 +1,14 @@
+{
+  "config": "configs/stage1_final.yaml",
+  "model": "Qwen/Qwen3-Embedding-0.6B",
+  "n_docs": 200,
+  "n_queries": 50,
+  "max_abs_cos_diff": 0.0091438889503479,
+  "mean_abs_cos_diff": 0.0013542543165385723,
+  "min_self_cos_query": 0.9997708201408386,
+  "min_self_cos_doc": 0.9997353553771973,
+  "top10_mismatched_queries": 24,
+  "top10_set_mismatched_queries": 3,
+  "cpu_encode_seconds": 116.6,
+  "pass": false
+}
