@@ -130,12 +130,18 @@ async def query(req: QueryRequest):
     # Get FAISS store for the requested version
     # We need a repo_path — for now, check the latest indexed repo
     sqlite = SQLiteStore()
-    # Find any indexed repo
+    # Use the most recently completed index for this version (a new upload replaces the previous one)
     conn = sqlite._get_conn()
     row = conn.execute(
-        "SELECT DISTINCT repo_path FROM chunks WHERE version = ? LIMIT 1",
+        "SELECT repo_path FROM index_status WHERE version = ? AND status = 'complete' "
+        "ORDER BY updated_at DESC, id DESC LIMIT 1",
         (req.version,)
     ).fetchone()
+    if not row:
+        row = conn.execute(
+            "SELECT DISTINCT repo_path FROM chunks WHERE version = ? LIMIT 1",
+            (req.version,)
+        ).fetchone()
     conn.close()
 
     if not row:
@@ -222,12 +228,50 @@ import shutil
 import os
 
 UPLOADS_ENABLED = os.getenv("CODELENS_UPLOADS", "1") == "1"  # enabled: embeddings come from PRISM /embed
+UPLOADS_DIR = Path(__file__).parent.parent / "uploads"
+
+
+def _clear_uploaded_repos() -> int:
+    """Remove every previously uploaded repo: chunks, index status, FAISS files and upload folder.
+    Only paths under backend/uploads/ are touched. Returns the number of repos removed."""
+    from app.config import INDEX_DIR
+
+    sqlite = SQLiteStore()
+    conn = sqlite._get_conn()
+    paths = {r["repo_path"] for r in conn.execute("SELECT DISTINCT repo_path FROM chunks")}
+    paths |= {r["repo_path"] for r in conn.execute("SELECT DISTINCT repo_path FROM index_status")}
+    uploads_root = str(UPLOADS_DIR.resolve())
+    removed = 0
+    indexer = get_indexer()
+    for rp in paths:
+        if not str(Path(rp).resolve()).startswith(uploads_root):
+            continue
+        conn.execute("DELETE FROM chunks WHERE repo_path = ?", (rp,))
+        conn.execute("DELETE FROM index_status WHERE repo_path = ?", (rp,))
+        for version in ("main",):
+            name = indexer._make_index_name(str(Path(rp).resolve()), version)
+            for f in (INDEX_DIR / f"{name}.faiss", INDEX_DIR / f"{name}_ids.npy"):
+                f.unlink(missing_ok=True)
+        shutil.rmtree(rp, ignore_errors=True)
+        removed += 1
+    conn.commit()
+    conn.close()
+    indexer.faiss = None  # drop any cached in-memory index of a removed repo
+    return removed
+
+
+@app.delete("/api/index_upload")
+async def clear_uploads():
+    """Clear all uploaded repositories (the demo datasets served by PRISM are not affected)."""
+    return {"status": "cleared", "removed_repos": _clear_uploaded_repos()}
+
 
 @app.post("/api/index_upload")
 async def index_upload(background_tasks: BackgroundTasks, files: list[UploadFile] = File(...), paths: list[str] = Form(...)):
-    """Accepts uploaded repository files and indexes them."""
+    """Accepts uploaded repository files and indexes them. A new upload replaces the previous one."""
     if not UPLOADS_ENABLED:
         raise HTTPException(status_code=503, detail="UPLOADS_DISABLED: repository uploads are disabled until the PRISM /embed route is wired (set CODELENS_UPLOADS=1)")
+    _clear_uploaded_repos()
     # Create a unique upload directory
     import uuid
     repo_name = f"uploaded_repo_{uuid.uuid4().hex[:8]}"

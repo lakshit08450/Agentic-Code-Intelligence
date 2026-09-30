@@ -845,7 +845,7 @@ Output
           <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.5rem;">Lines ${r.start_line}-${r.end_line} &middot; score ${Number(r.score).toFixed(3)}${c.source === 'prism' ? ' (cosine ' + Number(c.stage1_score).toFixed(3) + ')' : ''}${r.version ? ' &middot; version ' + escapeHtml(r.version) : ''}</div>
           ${c.history && c.history.length ? `<div style="font-size: 0.75rem; opacity: 0.75; margin-bottom: 0.4rem;">history: ${c.history.map(h => escapeHtml(h.status + (h.from ? ' ' + h.from : '') + (h.at ? ' @' + h.at : ''))).join(' &rarr; ')}</div>` : ''}
           <div style="font-family: var(--font-code); font-size: 0.8rem; background: rgba(0,0,0,0.05); padding: 0.5rem; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            ${r.snippet ? escapeHtml(r.snippet.split('\\n')[0]) : '...'}
+            ${r.snippet ? escapeHtml(r.snippet.split(/\r?\n/).find(l => l.trim()) || '') : '...'}
           </div>
         `;
 
@@ -863,36 +863,40 @@ Output
       els.fileName.innerText = r.file || 'unknown';
       els.fileRank.innerText = `Rank #${rank}`;
 
+      const numbered = (lineNum, content, hl) =>
+        `<div${hl ? ' class="highlight-wash"' : ''}><span style="opacity:0.5;display:inline-block;width:3.5em">${lineNum}</span>${escapeHtml(content)}</div>`;
+      const rangeText = (s, e, total) => `Lines ${s}–${e}${total ? ' of ' + total : ''} · ${e - s + 1} lines`;
+
       if ((r.context || {}).source === 'prism') {
-        const lines = (r.snippet || '').split('\\n');
-        els.lineCount.innerText = `${lines.length} lines`;
-        els.codeLines.innerHTML = lines.map((line, i) => `<div class="highlight-wash"><span style="opacity:0.5;display:inline-block;width:3.5em">${r.start_line + i}</span>${escapeHtml(line)}</div>`).join('');
+        // PRISM results carry their snippet (APPS: the whole program); number it from its start line
+        const lines = (r.snippet || '').split(/\r?\n/);
+        const end = r.start_line + lines.length - 1;
+        els.lineCount.innerText = rangeText(r.start_line, Math.max(end, r.end_line));
+        els.codeLines.innerHTML = lines.map((line, i) => numbered(r.start_line + i, line, true)).join('');
         els.codeScroll.scrollTop = 0;
         return;
       }
-      // Fetch full code from backend
+      // Uploaded repo: fetch the whole file (numbered from line 1) and highlight the matched range
       try {
         const res = await fetch(`/api/code?file=${encodeURIComponent(r.file)}&start_line=${r.start_line}&end_line=${r.end_line}&version=main`);
-        let fullCode = r.snippet;
+        let fullCode = null;
         if (res.ok) {
           const codeData = await res.json();
           if (codeData.code) fullCode = codeData.code;
         }
-
-        const snippetLines = fullCode ? fullCode.split('\\n') : ['// No code provided'];
-        els.lineCount.innerText = `${snippetLines.length} lines`;
-
-        // Highlight the matched lines
-        els.codeLines.innerHTML = snippetLines.map((line, i) => {
-          const currentLineNum = i + 1; // Assuming full file starts at line 1, but if we got fullCode it's from line 1. Wait, if it's full file, then lines match exactly.
-          // Let's just highlight the snippet range
-          const isMatched = currentLineNum >= r.start_line && currentLineNum <= r.end_line;
-          const lineContent = line.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          if(isMatched) {
-            return `<div class="highlight-wash">${lineContent}</div>`;
-          }
-          return `<div>${lineContent}</div>`;
-        }).join('');
+        if (fullCode) {
+          const fileLines = fullCode.split(/\r?\n/);
+          els.lineCount.innerText = rangeText(r.start_line, r.end_line, fileLines.length);
+          els.codeLines.innerHTML = fileLines.map((line, i) =>
+            numbered(i + 1, line, i + 1 >= r.start_line && i + 1 <= r.end_line)).join('');
+          const first = els.codeLines.querySelector('.highlight-wash');
+          els.codeScroll.scrollTop = first ? Math.max(0, first.offsetTop - 40) : 0;
+          return;
+        }
+        // File not readable: show the snippet numbered from its own start line
+        const lines = (r.snippet || '// No code provided').split(/\r?\n/);
+        els.lineCount.innerText = rangeText(r.start_line, r.end_line);
+        els.codeLines.innerHTML = lines.map((line, i) => numbered(r.start_line + i, line, true)).join('');
       } catch (err) {
         els.codeLines.innerHTML = '<div>Error loading code</div>';
       }
