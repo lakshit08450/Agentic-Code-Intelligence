@@ -65,13 +65,62 @@ async def health():
     return {"status": "ok", "service": "codelens"}
 
 
+# ── PRISM model (separate local server, see README "Model integration") ──
+@app.get("/api/model_status")
+async def model_status():
+    """Readiness of the PRISM server (models warming up, sandbox availability, dataset versions)."""
+    from starlette.concurrency import run_in_threadpool
+    from app.agent import prism_client
+
+    h = await run_in_threadpool(prism_client.health)
+    versions = h.get("repo_versions") or []
+    return {
+        "prism_url": prism_client.PRISM_URL,
+        "status": h.get("status"), "ready": bool(h.get("ready")), "error": h.get("error"),
+        "sandbox_available": bool((h.get("sandbox") or {}).get("available")),
+        "sandbox_reason": (h.get("sandbox") or {}).get("reason"),
+        "datasets": [{"value": "apps", "label": "APPS corpus (8,765 Python solutions)"}]
+                    + [{"value": v, "label": f"Demo repo @ {v}"} for v in versions]
+                    + ([{"value": f"{versions[0]}..{versions[-1]}",
+                         "label": f"Demo repo, all versions {versions[0]}..{versions[-1]}"}] if len(versions) > 1 else []),
+    }
+
+
+async def _prism_query(req: QueryRequest) -> QueryResponse:
+    from starlette.concurrency import run_in_threadpool
+    from app.agent import prism_client
+
+    query_id = str(uuid.uuid4())[:8]
+    try:
+        resp = await run_in_threadpool(prism_client.search, req.query, req.version, req.max_results)
+    except prism_client.PrismError as e:
+        raise HTTPException(status_code=e.http_status, detail=f"{e.code}: {e.message}")
+    if resp.get("error"):
+        err = resp["error"]
+        raise HTTPException(status_code=err.get("http_status", 502), detail=f"{err.get('code')}: {err.get('message')}")
+    out = prism_client.to_query_response(query_id, req.query, resp)
+    _query_traces[query_id] = [t.model_dump() for t in out.trace]
+    return out
+
+
 # ── Search ─────────────────────────────────────────────
+@app.post("/api/query", response_model=QueryResponse, include_in_schema=False)
+async def query_alias(req: QueryRequest):
+    """Alias: the frontend posts to /api/query."""
+    return await query(req)
+
+
 @app.post("/api/search", response_model=QueryResponse)
 async def query(req: QueryRequest):
     """
     Execute the full agentic pipeline:
     Plan → Search → Read → Refine
+    PRISM datasets ('apps', 'v1'..'v4', 'v1..v4') are answered by the PRISM server.
     """
+    from app.agent import prism_client
+
+    if prism_client.is_prism_version(req.version):
+        return await _prism_query(req)
     query_id = str(uuid.uuid4())[:8]
     total_start = time.time()
     trace_steps: list[AgentTraceStep] = []
@@ -172,9 +221,13 @@ from fastapi import UploadFile, Form, File
 import shutil
 import os
 
+UPLOADS_ENABLED = os.getenv("CODELENS_UPLOADS", "0") == "1"
+
 @app.post("/api/index_upload")
 async def index_upload(background_tasks: BackgroundTasks, files: list[UploadFile] = File(...), paths: list[str] = Form(...)):
     """Accepts uploaded repository files and indexes them."""
+    if not UPLOADS_ENABLED:
+        raise HTTPException(status_code=503, detail="UPLOADS_DISABLED: repository uploads are disabled until the PRISM /embed route is wired (set CODELENS_UPLOADS=1)")
     # Create a unique upload directory
     import uuid
     repo_name = f"uploaded_repo_{uuid.uuid4().hex[:8]}"
@@ -213,6 +266,8 @@ async def index_upload(background_tasks: BackgroundTasks, files: list[UploadFile
 @app.post("/api/index")
 async def index_repo(req: IndexRequest, background_tasks: BackgroundTasks):
     """Trigger repository indexing as a background task."""
+    if not UPLOADS_ENABLED:
+        raise HTTPException(status_code=503, detail="UPLOADS_DISABLED: repository indexing is disabled until the PRISM /embed route is wired (set CODELENS_UPLOADS=1)")
     indexer = get_indexer()
 
     # Validate path exists

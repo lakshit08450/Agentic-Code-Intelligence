@@ -57,6 +57,7 @@ class SearchService:
         t0 = time.perf_counter()
         try:
             self._load_models_and_stores()
+            self._repo_versions = [label for _, label, _ in self.stores[("fusion", "repo")].versions()]
             self.sandbox = self._check_sandbox()
             for pipeline in ("fusion", "qwen3"):  # warm-up: first encode is slow
                 self.stores[(pipeline, "apps")].encoder.embed(["warm up"], is_query=True)
@@ -107,9 +108,7 @@ class SearchService:
         return {"available": True, "reason": "ok"}
 
     def health(self) -> dict:
-        versions = []
-        if ("fusion", "repo") in self.stores:
-            versions = [label for _, label, _ in self.stores[("fusion", "repo")].versions()]
+        versions = list(getattr(self, "_repo_versions", []))  # cached at load: /health never touches SQLite
         return {
             "schema_version": SCHEMA_VERSION, "status": self.state, "ready": self.state == "ready", "stub": self.stub,
             "load_time_s": self.load_time_s, "error": self.load_error, "sandbox": self.sandbox,

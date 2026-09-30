@@ -56,3 +56,6 @@ docker/data/
 
 # ── Eval outputs ──
 eval/results/
+
+# local Python venv for the backend
+.venv/

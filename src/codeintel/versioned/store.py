@@ -39,7 +39,8 @@ class Store:
     def __init__(self, root: str | Path, encoder: PrePostPipelineEncoder) -> None:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(str(self.root / "index.sqlite"))
+        # check_same_thread=False: the app server loads stores in one thread and serves in others (calls are serialized)
+        self.db = sqlite3.connect(str(self.root / "index.sqlite"), check_same_thread=False)
         self.db.executescript(SCHEMA)
         self.encoder = encoder
         vec = self.root / "vectors.npy"

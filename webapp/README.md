@@ -5,11 +5,45 @@
 
 ---
 
-## ⚠️ Important Note About the Model
-**The final trained retrieval model is not included in this repository yet.** 
-The backend contains a clean model integration interface (`backend/app/agent/model_adapter.py`) and is currently using a lightweight, mocked numpy implementation to allow the frontend and backend integration to function instantly. It can be effortlessly connected to the final model when provided.
+## Retrieval model (PRISM)
+CodeLens uses the PRISM pipeline from this repository: **pretrained embedding models (Qwen3-Embedding-0.6B +
+EmbeddingGemma-300m, fused) with execution-based re-ranking**. Nothing is trained or fine-tuned. The PRISM
+pipeline runs as its own local server (Python 3.11 venv at the repo root); CodeLens talks to it over HTTP
+(`backend/app/agent/prism_client.py`, frozen API in `../docs/INTEGRATION.md`), so the two virtual
+environments never share dependencies.
 
----
+- **Datasets** (picker next to the search box): the APPS corpus (8,765 Python solutions) and the PRISM demo
+  repository at versions v1..v4 (or all versions v1..v4, one result per file with its history).
+- **Stage 2** (execution re-ranking): when the query contains sample Input/Output, the top 20 Python candidates
+  are run on the sample input in PRISM's Windows sandbox; results show *passed sample tests* / *wrong output* /
+  *runtime error*. Otherwise a notice says why Stage 2 did not run (results are fusion-only).
+- **Benchmark vs app**: the benchmark submission executes the top 50 (fusion + Stage 2 k=50, AppsRetrieval test
+  NDCG@10 0.956); the app executes the top 20 for interactivity (same configuration at k=20: 0.952).
+
+## Start (Windows, three terminals, in this order)
+```powershell
+# 1. PRISM model server (repo root; 3.11 venv, demo data in demo_data/, sandbox set up) - ready in ~35 s
+cd <repo root>
+.venv\Scripts\python -m codeintel.app.server --port 8765
+# 2. CodeLens backend (its own 3.11 venv)
+cd <repo root>\webappackend
+py -3.11 -m venv .venv ; .venv\Scripts\python -m pip install -r requirements.txt   # first time only
+.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+# 3. Frontend (Node 18+)
+cd <repo root>\webapprontend
+npm install        # first time only
+npm run dev        # open http://localhost:5173
+```
+Checks: `curl http://127.0.0.1:8765/health` shows `"ready": true`; `curl http://127.0.0.1:8000/api/model_status`
+shows `"ready": true` and the datasets. `PRISM_API_URL` overrides the PRISM server address.
+
+### Demo queries
+1. **APPS with sample I/O (Stage 2 runs)**: the "APPS problem with sample I/O" example button (a+b with two
+   samples): the top results are executed and marked *passed sample tests*.
+2. **Plain**: "Given a string, reverse it and print the reversed string." (APPS) - fusion-only notice.
+3. **Version**: dataset "Demo repo @ v2", query "parse sample input and output pairs from a problem statement".
+4. **All versions**: dataset "Demo repo, all versions v1..v4", query "run an untrusted program in a sandbox
+   with a time limit" - one result per file with its version history.
 
 ## What is CodeLens?
 

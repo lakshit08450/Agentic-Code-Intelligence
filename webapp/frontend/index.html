@@ -24,9 +24,9 @@
       --color-paper: #FDFBF7;
       --color-panel: #FFFFFF;
       --color-border: #1A1A2E;
-      
+
       --color-shadow: #1A1A2E;
-      
+
       /* Route colors */
       --route-semantic: var(--color-lilac);
       --route-ast: var(--color-mint);
@@ -36,7 +36,7 @@
       --font-display: 'Fraunces', serif;
       --font-text: 'Inter Tight', sans-serif;
       --font-code: 'JetBrains Mono', monospace;
-      
+
       /* Motion */
       --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
       --transition-spring: 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -48,7 +48,7 @@
       --color-ink: #FDFBF7;
       --color-border: #FDFBF7;
       --color-shadow: #FDFBF7;
-      
+
       --color-tomato: #FF5A5A;
       --color-marigold: #FFC061;
       --color-mint: #23A99B;
@@ -95,7 +95,7 @@
       border-radius: 8px;
       transition: transform var(--transition-spring), box-shadow var(--transition-fast);
     }
-    
+
     .sticker:hover:not(:disabled) {
       transform: translate(-1px, -1px);
       box-shadow: 4px 4px 0 var(--color-shadow);
@@ -197,7 +197,7 @@
       gap: 0.5rem;
       border-color: var(--color-border);
     }
-    
+
     #searchButton:disabled {
       opacity: 0.7;
       cursor: not-allowed;
@@ -451,7 +451,7 @@
     }
     .loader span:nth-child(2) { background: var(--color-marigold); animation-delay: 0.1s; }
     .loader span:nth-child(3) { background: var(--color-mint); animation-delay: 0.2s; }
-    
+
     @keyframes bounce {
       from { transform: translateY(0); }
       to { transform: translateY(-6px); }
@@ -516,6 +516,9 @@
               <option value="structural">Structural</option>
               <option value="hybrid" selected>Hybrid</option>
             </select>
+            <select id="datasetPicker" class="sticker" title="What to search: PRISM datasets (APPS corpus, demo repo versions) or an uploaded repo" style="padding: 0.5rem; border-color: var(--color-border); font-family: var(--font-text); font-weight: 500; cursor: pointer; max-width: 16rem;">
+              <option value="apps">APPS corpus (8,765 Python solutions)</option>
+            </select>
             <div id="loadingIndicator" class="loader">
               <span></span><span></span><span></span>
             </div>
@@ -527,6 +530,7 @@
           </div>
         </div>
       </form>
+      <div id="modelStatus" style="font-size: 0.85rem; margin: 0.25rem 0 0.75rem; opacity: 0.85;">&#9676; checking the PRISM model server&hellip;</div>
 
       <div id="searchContent">
         <!-- Welcome State -->
@@ -536,11 +540,25 @@
           </svg>
           <h2 id="emptyTitle">Code Intelligence</h2>
           <p id="emptyDescription">Ask questions about your codebase in <span class="wobbly-underline">plain English</span>.</p>
-          
+
           <div id="examplesDialog">
-            <button class="example-btn sticker">Where is the database initialized?</button>
-            <button class="example-btn sticker">Find all auth middlewares</button>
-            <button class="example-btn sticker">How are payment errors handled?</button>
+            <button class="example-btn sticker" data-dataset="apps" data-query="You are given two integers a and b. Print their sum.
+
+-----Input-----
+The only line contains two integers a and b (0 &lt;= a, b &lt;= 1000).
+
+-----Output-----
+Print a + b.
+
+-----Examples-----
+Input
+2 3
+
+Output
+5">APPS problem with sample I/O (Stage 2 runs)</button>
+            <button class="example-btn sticker" data-dataset="apps" data-query="Given a string, reverse it and print the reversed string.">Plain: reverse a string and print it</button>
+            <button class="example-btn sticker" data-dataset="v2" data-query="parse sample input and output pairs from a problem statement">Demo repo @ v2: parse sample I/O from a statement</button>
+            <button class="example-btn sticker" data-dataset="v1..v4" data-query="run an untrusted program in a sandbox with a time limit">Demo repo v1..v4: sandbox with a time limit</button>
           </div>
         </div>
 
@@ -556,7 +574,7 @@
 
     <!-- Right Pane: Code View -->
     <div class="pane-right">
-      
+
       <div id="codeEmpty" class="empty-state">
         <svg class="doodle" viewBox="0 0 24 24" fill="none" stroke="var(--color-lilac)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="16 18 22 12 16 6"></polyline>
@@ -576,7 +594,7 @@
             <span id="fileRank" style="color: var(--color-mint); border: 1px solid currentColor; padding: 2px 6px; border-radius: 12px; font-size: 0.7rem;">Rank #1</span>
           </div>
         </div>
-        
+
         <div id="codeScroll">
           <div id="codeLines">
 <!-- Code injected here -->
@@ -588,7 +606,7 @@
           <button id="copyButton">Copy Snippet</button>
         </div>
       </div>
-      
+
     </div>
   </div>
 
@@ -646,18 +664,18 @@
     els.repoPicker.addEventListener('change', async (e) => {
       const files = Array.from(e.target.files);
       if (files.length === 0) return;
-      
+
       const formData = new FormData();
       let validFilesCount = 0;
-      
+
       // Filter logic: Ignore node_modules, .git, etc., and only keep js/ts files
       const ignorePattern = /node_modules|\.git|dist|build|coverage|\.next|__pycache__|\.cache|vendor/;
       const validExtensions = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'];
-      
+
       files.forEach(file => {
         const path = file.webkitRelativePath;
         if (ignorePattern.test(path)) return;
-        
+
         const ext = path.substring(path.lastIndexOf('.')).toLowerCase();
         if (validExtensions.includes(ext)) {
           formData.append('files', file);
@@ -665,40 +683,41 @@
           validFilesCount++;
         }
       });
-      
+
       if (validFilesCount === 0) {
         showMsg("No valid JavaScript/TypeScript files found in this repository.");
         return;
       }
-      
+
       showMsg(`Uploading and indexing ${validFilesCount} files...`);
       els.indexRepoBtn.innerText = "Indexing...";
       els.indexRepoBtn.disabled = true;
-      
+
       try {
         const res = await fetch('/api/index_upload', {
           method: 'POST',
           body: formData
         });
-        
+
         if (res.ok) {
           const data = await res.json();
           showMsg("Indexing job submitted. Repo Path: " + data.repo_path);
           // Start polling status
           pollIndexStatus(data.repo_path);
         } else {
-          showMsg("Error starting indexing job.");
+          const err = await res.json().catch(() => ({}));
+          showMsg(err.detail ? String(err.detail) : "Error starting indexing job.");
           resetIndexBtn();
         }
       } catch (err) {
         showMsg("Network error when trying to index.");
         resetIndexBtn();
       }
-      
+
       // Clear picker so same folder can be re-selected if needed
       els.repoPicker.value = '';
     });
-    
+
     let pollInterval;
     const pollIndexStatus = async (repoPath) => {
       clearInterval(pollInterval);
@@ -733,10 +752,71 @@
     // Examples click
     els.examplesDialog.querySelectorAll('.example-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        els.query.value = btn.innerText;
+        els.query.value = btn.dataset.query || btn.innerText;
+        if (btn.dataset.dataset) setDataset(btn.dataset.dataset);
         els.searchForm.dispatchEvent(new Event('submit'));
       });
     });
+
+    // ── PRISM model server status + dataset picker ──
+    const datasetPicker = document.getElementById('datasetPicker');
+    const modelStatus = document.getElementById('modelStatus');
+    let modelReady = false;
+    const setDataset = (value) => {
+      if (![...datasetPicker.options].some(o => o.value === value)) {
+        const o = document.createElement('option'); o.value = value; o.textContent = value; datasetPicker.appendChild(o);
+      }
+      datasetPicker.value = value;
+    };
+    const pollModel = async () => {
+      try {
+        const res = await fetch('/api/model_status');
+        const m = await res.json();
+        const current = datasetPicker.value;
+        datasetPicker.innerHTML = '';
+        (m.datasets && m.datasets.length ? m.datasets : [{ value: 'apps', label: 'APPS corpus' }]).forEach(d => {
+          const o = document.createElement('option'); o.value = d.value; o.textContent = d.label; datasetPicker.appendChild(o);
+        });
+        const up = document.createElement('option'); up.value = 'main'; up.textContent = 'Uploaded repo (main)'; datasetPicker.appendChild(up);
+        setDataset(current || 'apps');
+        modelReady = !!m.ready;
+        modelStatus.innerHTML = m.ready
+          ? `&#9679; PRISM model ready (Qwen3-Embedding-0.6B + EmbeddingGemma-300m fused)${m.sandbox_available ? ' &middot; execution sandbox on (Stage 2)' : ' &middot; <b>sandbox unavailable</b>: Stage 2 off (' + (m.sandbox_reason || '') + ')'}`
+          : (m.status === 'unreachable'
+              ? `&#9888; PRISM model server not reachable at ${m.prism_url} &mdash; start it first (see README)`
+              : `&#9676; PRISM models warming up on CPU (${m.status || 'loading'})&hellip; searches start when ready`);
+        modelStatus.style.color = m.ready ? 'var(--color-mint)' : 'var(--color-peach, #c47f2c)';
+        if (!m.ready) setTimeout(pollModel, 3000);
+      } catch (e) {
+        modelStatus.innerHTML = '&#9888; CodeLens backend not reachable (start it on port 8000)';
+        setTimeout(pollModel, 5000);
+      }
+    };
+    pollModel();
+
+    const STAGE2 = {
+      PASS: ['&#10003; passed sample tests', '#d8f0d2', '#1f5e14'],
+      WRONG: ['&#10007; wrong output on samples', '#f6dcd4', '#7a2412'],
+      ERROR: ['&#10007; runtime error', '#f6dcd4', '#7a2412'],
+      TIMEOUT: ['&#9201; timed out', '#f3ead0', '#6b5310'],
+      UNKNOWN: ['? not verifiable', '#ece8e0', '#555'],
+    };
+    const stage2Badge = (r) => {
+      const c = r.context || {};
+      if (c.source !== 'prism') return '';
+      if (!c.stage2_ran) return `<span class="route-badge" style="background:#ece8e0;color:#555" title="${c.fallback_reason || ''}">Stage 2 not run</span>`;
+      const b = STAGE2[c.stage2_outcome];
+      if (!b) return '<span class="route-badge" style="background:#ece8e0;color:#555">not executed (below top 20)</span>';
+      return `<span class="route-badge" style="background:${b[1]};color:${b[2]}" title="Stage 2: executed on the statement's sample input in the sandbox">${b[0]}</span>`;
+    };
+    const FALLBACK_TEXT = {
+      no_sample_io: 'Stage 2 not run: the query has no sample input/output, so results are fusion-only (Stage 1).',
+      sandbox_unavailable: 'Stage 2 not run: the execution sandbox is unavailable, so results are fusion-only (Stage 1).',
+      verify_false: 'Stage 2 disabled for this query; results are fusion-only (Stage 1).',
+      pipeline_without_stage2: 'Stage 2 is not part of this pipeline; results are fusion-only (Stage 1).',
+      not_applicable: 'Stage 2 not applicable (Python only): uploaded JS/TS repos use fusion-only retrieval.',
+    };
+    const escapeHtml = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     // UI Helpers
     const showMsg = (txt) => {
@@ -751,27 +831,28 @@
         els.resultPicker.innerHTML = '<p>No results found.</p>';
         return;
       }
-      
+
       results.forEach((r, idx) => {
         const div = document.createElement('div');
         div.className = 'result-card sticker routeCard';
-        
-        // Randomize route for demo if not provided
-        const route = r.route || ['semantic', 'ast', 'evolution'][idx % 3];
-        
+
+        const route = r.type || 'semantic';
+        const c = r.context || {};
         div.innerHTML = `
-          <span class="route-badge ${route}">${route}</span>
-          <div class="result-title">${r.file || 'unknown_file'}</div>
-          <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.5rem;">Lines ${r.start_line}-${r.end_line}</div>
+          <span class="route-badge ${route}">${route === 'stage2' ? 'fusion + stage 2' : (c.source === 'prism' ? 'fusion' : route)}</span>
+          ${stage2Badge(r)}
+          <div class="result-title">#${r.rank || idx + 1} ${escapeHtml(r.file || 'unknown_file')}</div>
+          <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.5rem;">Lines ${r.start_line}-${r.end_line} &middot; score ${Number(r.score).toFixed(3)}${c.source === 'prism' ? ' (cosine ' + Number(c.stage1_score).toFixed(3) + ')' : ''}${r.version ? ' &middot; version ' + escapeHtml(r.version) : ''}</div>
+          ${c.history && c.history.length ? `<div style="font-size: 0.75rem; opacity: 0.75; margin-bottom: 0.4rem;">history: ${c.history.map(h => escapeHtml(h.status + (h.from ? ' ' + h.from : '') + (h.at ? ' @' + h.at : ''))).join(' &rarr; ')}</div>` : ''}
           <div style="font-family: var(--font-code); font-size: 0.8rem; background: rgba(0,0,0,0.05); padding: 0.5rem; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            ${r.snippet ? r.snippet.split('\\n')[0] : '...'}
+            ${r.snippet ? escapeHtml(r.snippet.split('\\n')[0]) : '...'}
           </div>
         `;
-        
+
         div.addEventListener('click', () => {
           showCodePreview(r, idx + 1);
         });
-        
+
         els.resultPicker.appendChild(div);
       });
     };
@@ -781,7 +862,14 @@
       els.selectedPreview.classList.remove('hidden');
       els.fileName.innerText = r.file || 'unknown';
       els.fileRank.innerText = `Rank #${rank}`;
-      
+
+      if ((r.context || {}).source === 'prism') {
+        const lines = (r.snippet || '').split('\\n');
+        els.lineCount.innerText = `${lines.length} lines`;
+        els.codeLines.innerHTML = lines.map((line, i) => `<div class="highlight-wash"><span style="opacity:0.5;display:inline-block;width:3.5em">${r.start_line + i}</span>${escapeHtml(line)}</div>`).join('');
+        els.codeScroll.scrollTop = 0;
+        return;
+      }
       // Fetch full code from backend
       try {
         const res = await fetch(`/api/code?file=${encodeURIComponent(r.file)}&start_line=${r.start_line}&end_line=${r.end_line}&version=main`);
@@ -790,10 +878,10 @@
           const codeData = await res.json();
           if (codeData.code) fullCode = codeData.code;
         }
-        
+
         const snippetLines = fullCode ? fullCode.split('\\n') : ['// No code provided'];
         els.lineCount.innerText = `${snippetLines.length} lines`;
-        
+
         // Highlight the matched lines
         els.codeLines.innerHTML = snippetLines.map((line, i) => {
           const currentLineNum = i + 1; // Assuming full file starts at line 1, but if we got fullCode it's from line 1. Wait, if it's full file, then lines match exactly.
@@ -808,7 +896,7 @@
       } catch (err) {
         els.codeLines.innerHTML = '<div>Error loading code</div>';
       }
-      
+
       els.codeScroll.scrollTop = 0;
     };
 
@@ -823,24 +911,24 @@
       els.resultPicker.classList.add('hidden');
       els.codeEmpty.classList.remove('hidden');
       els.selectedPreview.classList.add('hidden');
-      
+
       els.questionText.innerText = q;
       els.questionText.classList.remove('hidden');
-      
+
       els.searchButton.disabled = true;
       els.newSearch.classList.remove('hidden');
       els.loader.classList.add('active');
-      
+
       const mode = els.searchMode.value;
-      
+
       // Actually call the backend /api/search endpoint
       try {
         const response = await fetch('/api/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: q, mode: mode, version: "main", max_results: 10, include_trace: false })
+          body: JSON.stringify({ query: q, mode: mode, version: datasetPicker.value || "apps", max_results: 10, include_trace: false })
         });
-        
+
         let data = [];
         let latency = 0;
         if (response.ok) {
@@ -848,23 +936,36 @@
           data = respJson.results || [];
           latency = respJson.total_ms || 0;
         } else {
-          // Fallback demo data if endpoint fails
-          await new Promise(r => setTimeout(r, 1000));
-          data = [
-            { file: "backend/app/indexer/embedder.py", start_line: 14, end_line: 25, snippet: "class Embedder:\\n    def __init__(self):\\n        self.model = load_model()\\n\\n    def embed(self, text):\\n        return self.model.encode(text)", route: "semantic" },
-            { file: "backend/app/agent/searcher.py", start_line: 45, end_line: 52, snippet: "def search_codebase(query):\\n    vector = embedder.embed(query)\\n    results = db.similarity_search(vector)\\n    return results", route: "ast" }
-          ];
-          latency = 1000;
+          const err = await response.json().catch(() => ({}));
+          const detail = err.detail ? String(err.detail) : `HTTP ${response.status}`;
+          els.answer.innerHTML = `<span style="color:#7a2412">&#9888; Search failed: ${escapeHtml(detail)}</span>${detail.startsWith('MODELS_LOADING') ? '<br>The PRISM models are still warming up; try again in a moment.' : ''}`;
+          els.answer.classList.remove('hidden');
+          renderResults([]);
+          els.resultPicker.classList.remove('hidden');
+          return;
         }
-        
-        els.answer.innerText = `Found ${data.length} results. Search completed in ${latency} ms.`;
+
+        const c0 = (data[0] && data[0].context) || {};
+        const isPrism = c0.source === 'prism';
+        const stage2Ran = data.some(r => (r.context || {}).stage2_ran);
+        const t = c0.timings_ms || {};
+        let notice = '';
+        if (isPrism) {
+          notice = stage2Ran
+            ? '<span style="background:#d8f0d2;color:#1f5e14;padding:2px 8px;border-radius:6px">Stage 2 ran: top candidates executed on the sample input in the sandbox</span>'
+            : `<span style="background:#f3ead0;color:#6b5310;padding:2px 8px;border-radius:6px">${FALLBACK_TEXT[c0.fallback_reason] || ('Stage 2 not run: ' + escapeHtml(c0.fallback_reason || ''))}</span>`;
+        } else if (data.length) {
+          notice = `<span style="background:#f3ead0;color:#6b5310;padding:2px 8px;border-radius:6px">${FALLBACK_TEXT.not_applicable}</span>`;
+        }
+        const split = isPrism ? ` (Stage 1 ${((t.encode + t.search) / 1000).toFixed(2)} s &middot; Stage 2 ${(t.verify / 1000).toFixed(2)} s)` : '';
+        els.answer.innerHTML = `Found ${data.length} results in ${(latency / 1000).toFixed(2)} s${split}.<br>${notice}`;
         els.answer.classList.remove('hidden');
         renderResults(data);
         els.resultPicker.classList.remove('hidden');
-        
+
         // Auto-select first result
         if(data.length > 0) showCodePreview(data[0], 1);
-        
+
       } catch (err) {
         showMsg("Error fetching results.");
       } finally {
