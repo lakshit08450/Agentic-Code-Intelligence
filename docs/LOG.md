@@ -407,3 +407,11 @@ CPU fp32 vectors for the full 8,765-doc corpus + 200 validation queries (seed 13
 | fusion w=0.3 (submission) | 99.0% | 86.0% | 52.0% | 0.8681 -> 0.8654 (-0.0027) | 0.985 -> 0.985 (0) | 0.0033 |
 | Qwen3 only | 98.5% | 80.0% | 28.5% | 0.8591 -> 0.8600 (+0.0009) | 0.985 -> 0.985 (0) | 0.0073 |
 - P's threshold (>= 98% top-10 agreement and |NDCG@10 diff| <= 0.005): NDCG part met, top-10 agreement NOT met. The README states the measured numbers instead of claiming exact equivalence. CPU config not changed.
+
+## 2026-09-30 19:00 CPU latency (`scripts/latency.py` -> `results/latency_*.json`; CPU otherwise idle)
+20 validation stdin queries (seed 13). Stage 1: CPU fp32 query encode (no cache) + cosine over the full corpus (CPU fp32 vectors). Stage 2: fresh sandbox executions of the top-50 (no exec cache), 12 workers, frozen k=50 weights.
+| pipeline | Stage 1 p50 / p95 | Stage 2 p50 / p95 | total p50 / p95 | Stage 2 executions/s |
+|---|---|---|---|---|
+| fusion w=0.3 (submission) | 1,254 / 4,437 ms | 12,986 / 20,395 ms | 14,378 / 24,723 ms | 3.6 |
+| Qwen3 only | 838 / 2,908 ms | 12,393 / 18,133 ms | 14,641 / 19,558 ms | 3.9 |
+- Stage 2 dominates (Windows process start-up, ~0.56 s per python.exe launch). The integration app executes the top 20 instead of 50 for interactivity (docs/INTEGRATION.md).
