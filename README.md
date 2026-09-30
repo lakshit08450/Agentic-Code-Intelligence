@@ -37,12 +37,12 @@ solution  ──► Qwen3-Embedding-0.6B ──┘                      run each
 |---|---|---|---|---|---|---|---|
 | 1 | Qwen3 encoder only | Qwen3-Embedding-0.6B | none | 0.74641 | 0.70044 | | `results/appsretrieval_results_A.json` |
 | 2 | Qwen3 + Stage 2, k=20 | Qwen3 | frozen weights, k=20 | 0.8938 | 0.8812 | | `results/appsretrieval_results_B.json` |
-| 3 | Qwen3 + Stage 2, k=50 | Qwen3 | frozen weights, k=50 | 0.91274 | 0.89804 | primary candidate | `results/appsretrieval_results_B_k50.json` |
+| 3 | Qwen3 + Stage 2, k=50 | Qwen3 | frozen weights, k=50 | 0.91274 | 0.89804 | candidate (not selected) | `results/appsretrieval_results_B_k50.json` |
 | 4 | Fusion encoder only | Qwen3 (0.3) + EmbeddingGemma-300m (0.7) | none | 0.8702 | 0.8400 | **encoder-only submission** | `results/appsretrieval_results_A_fusion.json` |
-| 5 | Fusion + Stage 2, k=50 | fusion (0.3 / 0.7) | frozen weights, k=50 | [pending] | [pending] | primary candidate | `results/appsretrieval_results_B_fusion_k50.json` |
-| 6 | Fusion + Stage 2, k=20 | fusion (0.3 / 0.7) | frozen weights, k=20 | [pending] | [pending] | ablation only, not eligible | `results/appsretrieval_results_B_fusion_k20.json` |
+| 5 | Fusion + Stage 2, k=50 | fusion (0.3 / 0.7) | frozen weights, k=50 | 0.95646 | 0.94501 | **primary submission** | `results/appsretrieval_results_B_fusion_k50.json` |
+| 6 | Fusion + Stage 2, k=20 | fusion (0.3 / 0.7) | frozen weights, k=20 | 0.95199 | 0.94189 | ablation only, not eligible | `results/appsretrieval_results_B_fusion_k20.json` |
 
-**Primary submission** = the higher test NDCG@10 of runs 3 and 5 (decided by P on 30 Sep; the only choice
+**Primary submission: run 5** (fusion + Stage 2, k=50, NDCG@10 0.95646), the higher test NDCG@10 of runs 3 and 5 (decided by P on 30 Sep; the only choice
 made on test data, disclosed in `docs/LOG.md`). The pre-declared validation rule for fusion + Stage 2
 had narrowly failed (k=50 paired CI [-0.003, +0.050]). Everything else (models, preprocessing, fusion
 weight, Stage 2 weights and depth) was chosen on validation.
