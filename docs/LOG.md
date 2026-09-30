@@ -397,3 +397,5 @@ Command: `python scripts/cpu_check.py --config <cfg> --threads 4` (200 random co
 - All test runs: G1 e5 0.11532; G1 gte 0.57738; Qwen3 zero-shot 0.74641; Qwen3 Output A 0.74641; Qwen3 + S2 k=20 0.8938; Qwen3 + S2 k=50 0.91274; fusion Output A 0.8702; fusion + S2 k=50 0.95646; fusion + S2 k=20 0.95199 (ablation).
 
 ## 2026-09-30 deadline confirmed by P: **30 Sep 21:30** (submission).
+
+## 2026-09-30 deadline correction (P): final submission **30 Sep 23:59**; **21:30 = internal pipeline freeze** (then app integration and documentation review; after 21:30 only fixes the integration needs). Release + tag PRISM_GENAI_HACKATHON_Y2026 only on P's word (~23:00).

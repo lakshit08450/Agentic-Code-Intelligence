@@ -8,3 +8,6 @@ tools/sandbox-python/
 *.pid
 *.egg-info/
 results/predictions/
+demo_data/
+dist/
+app_runtime/
