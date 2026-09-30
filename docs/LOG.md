@@ -399,3 +399,11 @@ Command: `python scripts/cpu_check.py --config <cfg> --threads 4` (200 random co
 ## 2026-09-30 deadline confirmed by P: **30 Sep 21:30** (submission).
 
 ## 2026-09-30 deadline correction (P): final submission **30 Sep 23:59**; **21:30 = internal pipeline freeze** (then app integration and documentation review; after 21:30 only fixes the integration needs). Release + tag PRISM_GENAI_HACKATHON_Y2026 only on P's word (~23:00).
+
+## 2026-09-30 18:49 CPU reproducibility on the full corpus (`scripts/cpu_repro_eval.py` -> `results/cpu_repro.json`)
+CPU fp32 vectors for the full 8,765-doc corpus + 200 validation queries (seed 13) in `cache/embeddings_cpu_fp32` (Qwen3 via `scripts/cpu_repro.py`, stopped after its Qwen3 part to avoid duplicate work; EmbeddingGemma via `scripts/encode_cpu_fp32.py`, 4,207 s); compared with the GPU cache (Qwen3 fp16, Gemma bf16). Commit at run 8a5f531+.
+| pipeline | same top-1 | same top-10 set | identical top-10 order | NDCG@10 GPU -> CPU | recall@50 GPU -> CPU | max score diff (top-50) |
+|---|---|---|---|---|---|---|
+| fusion w=0.3 (submission) | 99.0% | 86.0% | 52.0% | 0.8681 -> 0.8654 (-0.0027) | 0.985 -> 0.985 (0) | 0.0033 |
+| Qwen3 only | 98.5% | 80.0% | 28.5% | 0.8591 -> 0.8600 (+0.0009) | 0.985 -> 0.985 (0) | 0.0073 |
+- P's threshold (>= 98% top-10 agreement and |NDCG@10 diff| <= 0.005): NDCG part met, top-10 agreement NOT met. The README states the measured numbers instead of claiming exact equivalence. CPU config not changed.

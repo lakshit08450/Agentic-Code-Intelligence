@@ -149,10 +149,13 @@ All other choices (models, preprocessing, fusion weight, Stage 2 weights and dep
 validation split carved from APPS train (seed 13). Test qrels were only read inside
 `mteb.evaluate`. Scoring never reads IDs or metadata (`tests/test_no_id_leak.py`).
 Development encodes used an RTX 5060 GPU (Qwen3 fp16, EmbeddingGemma bf16); the submitted pipeline defaults
-to CPU. CPU equivalence spot-check (200 docs, 50 queries): CPU fp32 and GPU vectors agree to cosine >= 0.9993,
-but query-document cosines differ by up to 0.009 (Qwen3) / 0.005 (Gemma), which reorders near-ties; the
-plan's 1e-3 criterion is **not met** (`results/cpu_check_*.json`). A CPU re-encode therefore reproduces the
-submitted scores only approximately.
+to CPU (fp32). **CPU reproducibility (measured, not exact)**: re-encoding the full corpus and 200 validation
+queries on CPU in fp32 (`results/cpu_repro.json`) gives, for the fusion pipeline, the same top-1 on 99.0% of
+queries, the same top-10 set on 86.0% and the identical top-10 order on 52.0%; NDCG@10 0.8681 (GPU cache) vs
+0.8654 (CPU), difference -0.0027; recall@50 identical (0.985). Qwen3 alone: top-1 98.5%, top-10 set 80.0%,
+identical order 28.5%, NDCG@10 +0.0009, recall@50 identical. Retrieval quality is reproduced within 0.003
+NDCG@10, but exact rankings are not (near-ties reorder), so a CPU re-run reproduces the submitted JSONs only
+approximately.
 
 ## 9. Tests
 `.venv\Scripts\python -m pytest -q` (sandbox, parser, comparator, reranker, ID-leak, versioned store).
