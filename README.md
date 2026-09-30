@@ -47,6 +47,8 @@ made on test data, disclosed in `docs/LOG.md`). The pre-declared validation rule
 had narrowly failed (k=50 paired CI [-0.003, +0.050]). Everything else (models, preprocessing, fusion
 weight, Stage 2 weights and depth) was chosen on validation.
 
+**Benchmark vs app depth**: the benchmark submission executes the top **k=50** candidates per query (fusion + Stage 2 k=50, test NDCG@10 **0.956**). The interactive app executes the top **k=20** to keep latency interactive; the same configuration at k=20 scored **0.952** on test (fusion + Stage 2 k=20, reported ablation, not a submission).
+
 Other test runs, all logged: harness check (G1) e5-base-v2 0.11532 (published 0.115) and gte-modernbert-base
 0.57738 (published 0.564); Qwen3 zero-shot 0.74641 (model choice; identical to run 1). Files
 `results/g1_e5_base_v2.json`, `results/test_qwen3_zeroshot.json`.

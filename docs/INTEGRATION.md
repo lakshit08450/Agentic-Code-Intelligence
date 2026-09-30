@@ -93,8 +93,9 @@ curl -X POST http://127.0.0.1:8765/search -H "Content-Type: application/json" -d
 - **Without the sandbox** (no `tools\sandbox-python`, no firewall rule, or the self-test fails): Stage 2 is
   skipped, results are fusion-only, `stage2.fallback_reason = "sandbox_unavailable"` and a warning explains
   why. `/health` -> `sandbox.available` shows this at start-up.
-- **Stage 2 depth**: the app executes the top 20 candidates per query (the benchmark submission used 50) to
-  keep latency interactive. Executions are cached in `app_runtime\exec.sqlite`.
+- **Stage 2 depth**: the app executes the top 20 candidates per query to keep latency interactive. The
+  benchmark submission executes 50 (fusion + Stage 2 k=50, test NDCG@10 0.956); the same configuration at
+  k=20 scored 0.952 on test (reported ablation). Executions are cached in `app_runtime\exec.sqlite`.
 - **Latency on CPU, RAM, load time**: [measured values filled in after the demo data is built].
 
 ## 4. Stub mode
