@@ -18,8 +18,8 @@ for d in [DATA_DIR, INDEX_DIR, MODELS_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 # ── Embedding Model ───────────────────────────────────
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-EMBEDDING_DIM = 384
+EMBEDDING_MODEL_NAME = "prism-fusion (Qwen3-Embedding-0.6B + EmbeddingGemma-300m via PRISM /embed)"
+EMBEDDING_DIM = 1792  # PRISM fusion: 1,024 (Qwen3) + 768 (EmbeddingGemma)
 
 # ── Cross-Encoder (Refiner) ───────────────────────────
 CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"

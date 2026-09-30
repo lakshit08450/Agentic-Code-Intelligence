@@ -5,6 +5,7 @@
 
 GET  /health  -> readiness, sandbox status, versions (200 always)
 POST /search  -> JSON body {"query", "version"?, "k"?, "verify"?, "pipeline"?, "stub"?, "require_stage2"?}
+POST /embed   -> JSON body {"texts": [...], "type": "query"|"document", "pipeline"?: "fusion"|"qwen3"} (additive)
 Requests are served by threads but searches are serialized (one at a time); each request waits at most
 --timeout seconds (504 TIMEOUT). Binds to 127.0.0.1 only.
 """
@@ -50,7 +51,8 @@ def make_handler(svc: SearchService, timeout_s: float):
                 self._send(404, {"error": {"code": "NOT_FOUND", "message": self.path}})
 
         def do_POST(self):  # noqa: N802
-            if self.path.rstrip("/") != "/search":
+            route = self.path.rstrip("/")
+            if route not in ("/search", "/embed"):
                 self._send(404, {"error": {"code": "NOT_FOUND", "message": self.path}})
                 return
             try:
@@ -63,6 +65,16 @@ def make_handler(svc: SearchService, timeout_s: float):
             except (ValueError, json.JSONDecodeError) as e:
                 r = error_response("BAD_REQUEST", f"invalid JSON body: {e}")
                 self._send(400, r)
+                return
+            if route == "/embed":  # additive route (schema 1.0): {"texts": [...], "type": "query"|"document"}
+                kwargs = {k: req[k] for k in ("type", "pipeline") if k in req}
+                fut = pool.submit(svc.embed, req.get("texts"), **kwargs)
+                try:
+                    resp = fut.result(timeout=timeout_s)
+                except FutTimeout:
+                    resp = {"schema_version": "1.0", "vectors": [], "dim": 0,
+                            "error": {"code": "TIMEOUT", "http_status": 504, "message": f"embed exceeded {timeout_s:.0f} s"}}
+                self._send(200 if resp.get("error") is None else resp["error"]["http_status"], resp)
                 return
             kwargs = {k: req[k] for k in ("version", "k", "verify", "pipeline", "stub", "require_stage2") if k in req}
             fut = pool.submit(svc.search, req.get("query", ""), **kwargs)

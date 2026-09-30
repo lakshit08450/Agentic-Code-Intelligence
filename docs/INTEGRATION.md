@@ -29,7 +29,7 @@ svc = SearchService()            # SearchService(stub=True) for canned results
 svc.load()                       # loads both models + demo stores, warms up
 resp = svc.search(query, version=None, k=10, verify=True, pipeline="fusion_stage2")
 ```
-HTTP (standard library server, binds 127.0.0.1):
+HTTP (standard library server, binds 127.0.0.1; routes `GET /health`, `POST /search`, `POST /embed`):
 ```powershell
 .venv\Scripts\python -m codeintel.app.server --port 8765          # add --stub for canned results
 curl http://127.0.0.1:8765/health
@@ -84,7 +84,87 @@ curl -X POST http://127.0.0.1:8765/search -H "Content-Type: application/json" -d
 | `INTERNAL` | 500 | unexpected exception (message included) | report it |
 
 ### Example response
-[filled from a real call after the demo data is built]
+Real response (30 Sep, this laptop) for an a+b statement with one sample, `k=2`; snippets and query
+truncated here. Stage 2 executions were already cached, so `verify` is fast (uncached: ~14 s, see Section 3).
+```json
+{
+ "schema_version": "1.0",
+ "stub": false,
+ "query": "You are given two integers a and b. Print their sum.\n\n-----I...",
+ "pipeline": "fusion_stage2",
+ "corpus": "apps",
+ "version": null,
+ "k": 2,
+ "stage2": {
+  "ran": true,
+  "fallback_reason": null,
+  "k_verified": 20
+ },
+ "results": [
+  {
+   "rank": 1,
+   "doc_id": "d8174",
+   "path": "d8174",
+   "lines": [
+    1,
+    2
+   ],
+   "snippet": "a,                   b = map(int,input().split())\nprint(a+b)",
+   "score": 1.097619104385376,
+   "stage1_score": 0.797619104385376,
+   "stage2_outcome": "PASS",
+   "version": {
+    "label": "apps",
+    "from": "apps",
+    "to": null
+   }
+  },
+  {
+   "rank": 2,
+   "doc_id": "d1393",
+   "path": "d1393",
+   "lines": [
+    1,
+    2
+   ],
+   "snippet": "a,b=map(int,input().split())\r\nprint(a+b)",
+   "score": 1.0870752215385437,
+   "stage1_score": 0.7870752215385437,
+   "stage2_outcome": "PASS",
+   "version": {
+    "label": "apps",
+    "from": "apps",
+    "to": null
+   }
+  }
+ ],
+ "timings_ms": {
+  "encode": 288.3,
+  "search": 108.5,
+  "verify": 711.1,
+  "total": 1126.1
+ },
+ "warnings": [],
+ "error": null
+}
+```
+
+### POST /embed (additive, 30 Sep 21:45)
+Request `{"texts": [...], "type": "query" | "document", "pipeline"?: "fusion" | "qwen3"}` (1-64 texts, each at most
+60,000 characters). Returns L2-normalised Stage 1 vectors with the same prompts and fusion weighting as the
+pipeline: `fusion` = sqrt(0.3)·Qwen3 (1,024-d) ++ sqrt(0.7)·EmbeddingGemma (768-d), renormalised, 1,792-d;
+`qwen3` = 1,024-d. Python: `svc.embed(texts, type="document")`.
+| field | type | meaning |
+|---|---|---|
+| `schema_version` | str | "1.0" |
+| `stub` | bool | canned vectors in stub mode |
+| `type`, `pipeline` | str | echo |
+| `dim` | int | 1792 (fusion) or 1024 (qwen3) |
+| `vectors` | list[list[float]] | one unit-norm vector per text, same order |
+| `timings_ms.embed` | float | encode time |
+| `error` | object or null | same codes as /search (`BAD_REQUEST`, `MODELS_LOADING`, `TIMEOUT`, `INTERNAL`) |
+Measured: 2 short documents in ~3.0 s on CPU (first call); a 3-file JS repo (6 chunks) indexed in ~2 s.
+
 
 ## 3. Behaviour
 - **Concurrency**: the server accepts concurrent connections, but searches run one at a time (a lock); a
@@ -96,7 +176,10 @@ curl -X POST http://127.0.0.1:8765/search -H "Content-Type: application/json" -d
 - **Stage 2 depth**: the app executes the top 20 candidates per query to keep latency interactive. The
   benchmark submission executes 50 (fusion + Stage 2 k=50, test NDCG@10 0.956); the same configuration at
   k=20 scored 0.952 on test (reported ablation). Executions are cached in `app_runtime\exec.sqlite`.
-- **Latency on CPU, RAM, load time**: [measured values filled in after the demo data is built].
+- **Measured on this laptop (Ryzen 9 270, 15 GB RAM, CPU only)**: model load + warm-up 34 s (weights cached);
+  server RAM 3.7 GB with both models loaded (CodeLens backend 0.08 GB); Stage 1 (encode + search) 0.2-0.4 s per
+  query; Stage 2 with sample I/O ~14 s when the 20 candidates are executed for the first time, under 1 s when
+  cached. Benchmark measurements at k=50: `results/latency_*.json` (Stage 2 p50 13 s).
 
 ## 4. Stub mode
 `SearchService(stub=True)` or `python -m codeintel.app.server --stub`: realistic canned results with the

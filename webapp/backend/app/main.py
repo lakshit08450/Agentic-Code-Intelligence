@@ -221,7 +221,7 @@ from fastapi import UploadFile, Form, File
 import shutil
 import os
 
-UPLOADS_ENABLED = os.getenv("CODELENS_UPLOADS", "0") == "1"
+UPLOADS_ENABLED = os.getenv("CODELENS_UPLOADS", "1") == "1"  # enabled: embeddings come from PRISM /embed
 
 @app.post("/api/index_upload")
 async def index_upload(background_tasks: BackgroundTasks, files: list[UploadFile] = File(...), paths: list[str] = Form(...)):

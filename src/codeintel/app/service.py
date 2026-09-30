@@ -228,5 +228,51 @@ class SearchService:
         return 1000 * (time.perf_counter() - t0), len(cands)
 
 
+    # ---------------- embed (additive, schema 1.0) ----------------
+    EMBED_MAX_TEXTS = 64
+    EMBED_MAX_CHARS = 60_000
+
+    def embed(self, texts, type: str = "document", pipeline: str = "fusion") -> dict:  # noqa: A002 - API field name
+        """L2-normalised Stage 1 embeddings (same prompts and fusion weighting as the pipeline).
+
+        type: "query" (query prompt) or "document" (document prompt); pipeline: "fusion" (default, 1,792-d:
+        sqrt(0.3)*Qwen3 (1,024) ++ sqrt(0.7)*EmbeddingGemma (768), renormalised) or "qwen3" (1,024-d).
+        """
+        base = {"schema_version": SCHEMA_VERSION, "type": type, "pipeline": pipeline}
+        try:
+            if not isinstance(texts, list) or not texts or not all(isinstance(t, str) for t in texts):
+                raise ApiError("BAD_REQUEST", "texts must be a non-empty list of strings")
+            if len(texts) > self.EMBED_MAX_TEXTS or any(len(t) > self.EMBED_MAX_CHARS for t in texts):
+                raise ApiError("BAD_REQUEST", f"at most {self.EMBED_MAX_TEXTS} texts of {self.EMBED_MAX_CHARS} chars per request")
+            if type not in ("query", "document"):
+                raise ApiError("BAD_REQUEST", 'type must be "query" or "document"')
+            if pipeline not in ("fusion", "qwen3"):
+                raise ApiError("BAD_REQUEST", 'pipeline must be "fusion" or "qwen3"')
+            if self.stub:
+                import hashlib
+
+                import numpy as np
+
+                dim = 1792 if pipeline == "fusion" else 1024
+                vecs = []
+                for t in texts:
+                    v = np.random.default_rng(int(hashlib.sha1(t.encode()).hexdigest()[:8], 16)).standard_normal(dim)
+                    vecs.append((v / np.linalg.norm(v)).astype("float32").round(6).tolist())
+                return base | {"stub": True, "dim": dim, "vectors": vecs, "timings_ms": {"embed": 0.0}, "error": None}
+            if self.state != "ready":
+                raise ApiError("MODELS_LOADING", f"models are {self.state}; poll GET /health until ready")
+            t0 = time.perf_counter()
+            with self._lock:
+                vecs = self.stores[(pipeline, "apps")].encoder.embed(texts, is_query=(type == "query"))
+            return base | {"stub": False, "dim": int(vecs.shape[1]), "vectors": vecs.round(6).tolist(),
+                           "timings_ms": {"embed": round(1000 * (time.perf_counter() - t0), 1)}, "error": None}
+        except ApiError as e:
+            return base | {"stub": self.stub, "dim": 0, "vectors": [], "timings_ms": {"embed": 0.0},
+                           "error": {"code": e.code, "http_status": ERROR_CODES[e.code], "message": e.message}}
+        except Exception as e:  # noqa: BLE001
+            return base | {"stub": self.stub, "dim": 0, "vectors": [], "timings_ms": {"embed": 0.0},
+                           "error": {"code": "INTERNAL", "http_status": 500, "message": f"{e.__class__.__name__}: {e}"}}
+
+
 def http_status(resp: dict) -> int:
     return 200 if resp.get("error") is None else ERROR_CODES[resp["error"]["code"]]
