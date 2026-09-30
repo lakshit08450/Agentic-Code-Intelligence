@@ -96,10 +96,19 @@ def build_versions(dev) -> tuple[list[Version], list[str], dict[str, str], list[
     return versions, qids, gold_unit, [dev.query_texts[i] for i in sel]
 
 
+_BACKENDS: dict = {}
+
+
 def fresh_encoder(cfg_path: str, tmp: Path, tag: str) -> PrePostPipelineEncoder:
+    """Empty embedding cache per store (honest timings), but ONE loaded copy of each model (RAM)."""
+    from codeintel.stage1.encoder import SentenceTransformerBackend
+
     cfg = copy.deepcopy(load_cfg(cfg_path))
     cfg.cache_dir, cfg.device = str(tmp / f"emb_{tag}"), "cpu"
-    return PrePostPipelineEncoder(cfg)
+    for m in cfg.models:
+        if m.id not in _BACKENDS:
+            _BACKENDS[m.id] = SentenceTransformerBackend(m, "cpu", cfg.batch_size, fp16_on_cuda=False, attn_budget=cfg.attn_budget)
+    return PrePostPipelineEncoder(cfg, backends=[_BACKENDS[m.id] for m in cfg.models])
 
 
 def unit_metrics(store: Store, qv: np.ndarray, qids, gold_unit, rows, collapse: bool) -> dict:
@@ -133,7 +142,7 @@ def run_pipeline(name: str, cfg_path: str, versions, qids, gold_unit, qtexts) ->
     try:
         qcfg = copy.deepcopy(load_cfg(cfg_path))
         qcfg.cache_dir, qcfg.device = CPU_CACHE, "cpu"
-        qv = PrePostPipelineEncoder(qcfg).embed(qtexts, is_query=True)
+        qv = PrePostPipelineEncoder(qcfg).embed(qtexts, is_query=True)  # all cached (cpu_repro): no model load
         inc = Store(tmp / "inc", fresh_encoder(cfg_path, tmp, "inc"))
         steps = [inc.add_version(v) for v in versions]
         t0 = time.perf_counter()
