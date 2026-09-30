@@ -1,6 +1,6 @@
 # Demo video
 
-**Link:** [to be added by the team before submission]
+**Link:** (https://drive.google.com/file/d/1YEp6YTXuxWe7WPgIh0SoK6oFcUNkqpdn/view?usp=drive_link)
 
 Contents (≤ 5 min), recorded on the dev laptop (CPU only, Windows 11):
 1. Problem and approach (fusion Stage 1 + execution-verified Stage 2).
