@@ -1,0 +1,9 @@
+# ABLATION ONLY (P, 30 Sep 09:45): fusion + frozen Stage 2 weights at k=20; not eligible for submission. Do not edit.
+k: 20
+w_pass: 0.3
+w_wrong: 0.05
+w_err: 0.05
+trivial_pass_factor: 0.1
+multi_answer_neutral: true
+workers: 12
+stage1_config: configs/fusion/qwen3_gemma_w0.3.yaml
