@@ -1,0 +1,58 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.so
+
+# ── Data / Models ──
+backend/data/
+backend/uploads/
+*.faiss
+*.npy
+*.db
+*.onnx
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.ckpt
+*.ckpt.*
+checkpoints/
+models/
+model_weights/
+.huggingface/
+
+
+# ── Node ──
+node_modules/
+frontend/dist/
+.cache/
+*.tsbuildinfo
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Environment ──
+.env
+.env.local
+.env.production
+
+# ── Docker ──
+docker/data/
+
+# ── Eval outputs ──
+eval/results/

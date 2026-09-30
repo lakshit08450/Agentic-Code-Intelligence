@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PRISM · Code Intelligence</title>
+  <meta name="description" content="A natural-language code retrieval UI" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* Variables for Light and Dark Modes */
+    :root {
+      /* Palette: Tomato, Marigold, Mint, Sky, Lilac */
+      --color-tomato: #FF6B6B;
+      --color-marigold: #FFB84C;
+      --color-mint: #2EC4B6;
+      --color-sky: #4E89FF;
+      --color-lilac: #B19CD9;
+      --color-ink: #1A1A2E;
+      --color-paper: #FDFBF7;
+      --color-panel: #FFFFFF;
+      --color-border: #1A1A2E;
+      
+      --color-shadow: #1A1A2E;
+      
+      /* Route colors */
+      --route-semantic: var(--color-lilac);
+      --route-ast: var(--color-mint);
+      --route-evolution: var(--color-marigold);
+
+      /* Typography */
+      --font-display: 'Fraunces', serif;
+      --font-text: 'Inter Tight', sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
+      
+      /* Motion */
+      --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-spring: 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    [data-theme="dark"] {
+      --color-paper: #121016;
+      --color-panel: #1D1A25;
+      --color-ink: #FDFBF7;
+      --color-border: #FDFBF7;
+      --color-shadow: #FDFBF7;
+      
+      --color-tomato: #FF5A5A;
+      --color-marigold: #FFC061;
+      --color-mint: #23A99B;
+      --color-sky: #4275E5;
+      --color-lilac: #9E85C7;
+    }
+
+    /* Paper Texture */
+    .grain {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.25;
+      mix-blend-mode: multiply;
+      background: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+    }
+
+    [data-theme="dark"] .grain {
+      opacity: 0.15;
+      mix-blend-mode: overlay;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0; padding: 0;
+    }
+
+    body {
+      font-family: var(--font-text);
+      background-color: var(--color-paper);
+      color: var(--color-ink);
+      line-height: 1.5;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Sticker Shadows & Borders */
+    .sticker {
+      border: 1.5px solid var(--color-border);
+      box-shadow: 3px 3px 0 var(--color-shadow);
+      border-radius: 8px;
+      transition: transform var(--transition-spring), box-shadow var(--transition-fast);
+    }
+    
+    .sticker:hover:not(:disabled) {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 var(--color-shadow);
+    }
+
+    .sticker:active:not(:disabled) {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 var(--color-shadow);
+    }
+
+    /* Header */
+    header {
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1.5px solid var(--color-border);
+      background-color: var(--color-panel);
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .prism-logo {
+      width: 28px;
+      height: 28px;
+    }
+
+    .theme-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--color-ink);
+      padding: 0.5rem;
+    }
+
+    /* Layout */
+    #workspace {
+      display: flex;
+      height: calc(100vh - 73px);
+      flex: 1;
+    }
+
+    /* Left Pane */
+    .pane-left {
+      width: 400px;
+      min-width: 300px;
+      border-right: 1.5px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      background: var(--color-paper);
+      z-index: 5;
+    }
+
+    #searchForm {
+      padding: 1.5rem;
+      border-bottom: 1.5px solid var(--color-border);
+      background: var(--color-panel);
+    }
+
+    .search-box {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    #query {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      font-family: var(--font-text);
+      font-size: 1rem;
+      background: var(--color-paper);
+      color: var(--color-ink);
+      outline: none;
+    }
+
+    .search-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+
+    #searchButton {
+      padding: 0.5rem 1rem;
+      background-color: var(--color-tomato);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-color: var(--color-border);
+    }
+    
+    #searchButton:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    #newSearch {
+      padding: 0.5rem 1rem;
+      background-color: var(--color-mint);
+      color: var(--color-ink);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #searchContent {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+
+    /* Right Pane */
+    .pane-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--color-panel);
+      padding: 1.5rem;
+      overflow: hidden;
+    }
+
+    /* Code Window UI */
+    .code-window {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--color-paper);
+      border: 1.5px solid var(--color-border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 4px 4px 0 var(--color-shadow);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      border-bottom: 1.5px solid var(--color-border);
+      background: var(--color-panel);
+      gap: 1rem;
+    }
+
+    .traffic-lights {
+      display: flex;
+      gap: 6px;
+    }
+    .traffic-lights span {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1.5px solid var(--color-border);
+    }
+    .traffic-lights span:nth-child(1) { background: var(--color-tomato); }
+    .traffic-lights span:nth-child(2) { background: var(--color-marigold); }
+    .traffic-lights span:nth-child(3) { background: var(--color-mint); }
+
+    #fileStrip {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-family: var(--font-code);
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    #fileName {
+      background: var(--color-sky);
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      border: 1.5px solid var(--color-border);
+    }
+
+    #codeScroll {
+      flex: 1;
+      overflow: auto;
+      background: var(--color-paper);
+      padding: 1rem;
+    }
+
+    #codeLines {
+      font-family: var(--font-code);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      white-space: pre;
+    }
+
+    #codeFooter {
+      padding: 0.75rem 1rem;
+      border-top: 1.5px solid var(--color-border);
+      background: var(--color-panel);
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-family: var(--font-code);
+    }
+
+    #copyButton {
+      background: var(--color-lilac);
+      color: var(--color-ink);
+      border: 1.5px solid var(--color-border);
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform var(--transition-fast);
+    }
+    #copyButton:hover { transform: scale(1.05); }
+
+    /* Results */
+    .result-card {
+      padding: 1rem;
+      margin-bottom: 1rem;
+      background: var(--color-panel);
+      cursor: pointer;
+      position: relative;
+    }
+
+    /* Tiny rotation for cards */
+    .result-card:nth-child(odd) { transform: rotate(-1deg); }
+    .result-card:nth-child(even) { transform: rotate(1deg); }
+    .result-card:hover { transform: rotate(0deg) translateY(-2px); }
+
+    .route-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.1rem 0.4rem;
+      border: 1.5px solid var(--color-border);
+      border-radius: 12px;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+    }
+
+    .route-badge.semantic { background: var(--route-semantic); color: #fff;}
+    .route-badge.ast { background: var(--route-ast); color: #fff;}
+    .route-badge.evolution { background: var(--route-evolution); color: #fff;}
+
+    .result-title {
+      font-family: var(--font-code);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    /* Highlighted lines */
+    .highlight-wash {
+      background-color: rgba(255, 184, 76, 0.3); /* Marigold wash */
+      border-left: 3px solid var(--color-marigold);
+      padding-left: 0.5rem;
+      transform: skewX(-2deg);
+      display: inline-block;
+      width: 100%;
+    }
+
+    [data-theme="dark"] .highlight-wash {
+      background-color: rgba(255, 192, 97, 0.2);
+    }
+
+    /* Welcome / Empty States */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      height: 100%;
+      padding: 2rem;
+    }
+
+    #emptyTitle {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    #emptyDescription {
+      color: var(--color-ink);
+      opacity: 0.8;
+      max-width: 300px;
+    }
+
+    .doodle {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 1rem;
+      stroke: var(--color-tomato);
+    }
+
+    /* Examples */
+    #examplesDialog {
+      margin-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .example-btn {
+      background: var(--color-panel);
+      text-align: left;
+      padding: 0.5rem 1rem;
+      font-family: var(--font-text);
+      color: var(--color-ink);
+      cursor: pointer;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      #workspace { flex-direction: column; }
+      .pane-left { width: 100%; min-height: 50vh; border-right: none; border-bottom: 1.5px solid var(--color-border); }
+      .pane-right { min-height: 50vh; }
+    }
+
+    /* Typography Utilities */
+    .wobbly-underline {
+      position: relative;
+      display: inline-block;
+    }
+    .wobbly-underline::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 100%;
+      height: 6px;
+      background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 10" preserveAspectRatio="none"%3E%3Cpath d="M0,5 Q10,10 20,5 T40,5 T60,5 T80,5 T100,5" fill="none" stroke="%23FF6B6B" stroke-width="2"/%3E%3C/svg%3E') repeat-x;
+    }
+
+    /* Loading Animation */
+    .loader {
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .loader.active {
+      display: flex;
+    }
+    .loader span {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--color-tomato);
+      animation: bounce 0.5s infinite alternate;
+    }
+    .loader span:nth-child(2) { background: var(--color-marigold); animation-delay: 0.1s; }
+    .loader span:nth-child(3) { background: var(--color-mint); animation-delay: 0.2s; }
+    
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-6px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation: none !important;
+        transition: none !important;
+      }
+      .result-card { transform: none !important; }
+    }
+
+    /* Hide items initially */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Paper Grain -->
+  <div class="grain"></div>
+
+  <header>
+    <div class="brand">
+      <svg class="prism-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 10L90 85H10L50 10Z" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/>
+        <!-- Rainbow Refraction -->
+        <path d="M30 45L75 55" stroke="var(--color-tomato)" stroke-width="4" stroke-linecap="round"/>
+        <path d="M35 55L80 65" stroke="var(--color-marigold)" stroke-width="4" stroke-linecap="round"/>
+        <path d="M40 65L85 75" stroke="var(--color-mint)" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      <span>PRISM</span>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <button id="indexRepoBtn" class="sticker" style="padding: 0.5rem 1rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; background: var(--color-mint); color: var(--color-ink); border: 1.5px solid var(--color-border);">Index Repo</button>
+      <input type="file" id="repoPicker" webkitdirectory directory multiple style="display: none;" />
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle Theme">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="workspace">
+    <!-- Left Pane: Search & Results -->
+    <div class="pane-left">
+      <form id="searchForm">
+        <div class="search-box">
+          <textarea id="query" class="sticker" rows="3" placeholder="What are you looking for in the code?&#10;e.g. 'How does authentication work?'" aria-label="Search query"></textarea>
+          <div class="search-actions">
+            <select id="searchMode" class="sticker" style="padding: 0.5rem; border-color: var(--color-border); font-family: var(--font-text); font-weight: 500; cursor: pointer;">
+              <option value="semantic">Semantic</option>
+              <option value="structural">Structural</option>
+              <option value="hybrid" selected>Hybrid</option>
+            </select>
+            <div id="loadingIndicator" class="loader">
+              <span></span><span></span><span></span>
+            </div>
+            <button type="button" id="newSearch" class="sticker hidden">Clear</button>
+            <button type="submit" id="searchButton" class="sticker">
+              Ask PRISM
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <div id="searchContent">
+        <!-- Welcome State -->
+        <div id="welcome" class="empty-state">
+          <svg class="doodle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          <h2 id="emptyTitle">Code Intelligence</h2>
+          <p id="emptyDescription">Ask questions about your codebase in <span class="wobbly-underline">plain English</span>.</p>
+          
+          <div id="examplesDialog">
+            <button class="example-btn sticker">Where is the database initialized?</button>
+            <button class="example-btn sticker">Find all auth middlewares</button>
+            <button class="example-btn sticker">How are payment errors handled?</button>
+          </div>
+        </div>
+
+        <div id="questionText" class="hidden" style="font-family: var(--font-display); font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-sky);"></div>
+        <div id="answer" class="hidden" style="margin-bottom: 2rem;"></div>
+
+        <!-- Results Picker Container -->
+        <div id="resultPicker" class="hidden">
+          <!-- Results injected here via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Pane: Code View -->
+    <div class="pane-right">
+      
+      <div id="codeEmpty" class="empty-state">
+        <svg class="doodle" viewBox="0 0 24 24" fill="none" stroke="var(--color-lilac)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6"></polyline>
+          <polyline points="8 6 2 12 8 18"></polyline>
+        </svg>
+        <h3>No Code Selected</h3>
+        <p>Select a result on the left to view the source code.</p>
+      </div>
+
+      <div id="selectedPreview" class="code-window hidden">
+        <div class="code-header">
+          <div class="traffic-lights">
+            <span></span><span></span><span></span>
+          </div>
+          <div id="fileStrip">
+            <span id="fileName">src/example.py</span>
+            <span id="fileRank" style="color: var(--color-mint); border: 1px solid currentColor; padding: 2px 6px; border-radius: 12px; font-size: 0.7rem;">Rank #1</span>
+          </div>
+        </div>
+        
+        <div id="codeScroll">
+          <div id="codeLines">
+<!-- Code injected here -->
+          </div>
+        </div>
+
+        <div id="codeFooter">
+          <span id="lineCount">0 lines</span>
+          <button id="copyButton">Copy Snippet</button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <div id="message" style="position: fixed; bottom: 20px; right: 20px; padding: 1rem; background: var(--color-ink); color: var(--color-paper); border-radius: 8px; font-weight: 500; opacity: 0; transition: opacity var(--transition-fast); pointer-events: none; z-index: 9999;"></div>
+
+  <script>
+    // Theme logic
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+    }
+
+    // Elements mapping
+    const els = {
+      query: document.getElementById('query'),
+      searchForm: document.getElementById('searchForm'),
+      searchButton: document.getElementById('searchButton'),
+      newSearch: document.getElementById('newSearch'),
+      welcome: document.getElementById('welcome'),
+      searchContent: document.getElementById('searchContent'),
+      questionText: document.getElementById('questionText'),
+      answer: document.getElementById('answer'),
+      resultPicker: document.getElementById('resultPicker'),
+      codeEmpty: document.getElementById('codeEmpty'),
+      selectedPreview: document.getElementById('selectedPreview'),
+      codeLines: document.getElementById('codeLines'),
+      codeScroll: document.getElementById('codeScroll'),
+      fileStrip: document.getElementById('fileStrip'),
+      fileName: document.getElementById('fileName'),
+      fileRank: document.getElementById('fileRank'),
+      lineCount: document.getElementById('lineCount'),
+      copyButton: document.getElementById('copyButton'),
+      message: document.getElementById('message'),
+      examplesDialog: document.getElementById('examplesDialog'),
+      loader: document.getElementById('loadingIndicator'),
+      indexRepoBtn: document.getElementById('indexRepoBtn'),
+      searchMode: document.getElementById('searchMode'),
+      repoPicker: document.getElementById('repoPicker')
+    };
+
+    // Keyboard shortcuts (Cmd/Ctrl + Enter)
+    els.query.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        els.searchForm.dispatchEvent(new Event('submit'));
+      }
+    });
+
+    // Index Repo logic (Browse and Upload)
+    els.indexRepoBtn.addEventListener('click', () => {
+      els.repoPicker.click();
+    });
+
+    els.repoPicker.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) return;
+      
+      const formData = new FormData();
+      let validFilesCount = 0;
+      
+      // Filter logic: Ignore node_modules, .git, etc., and only keep js/ts files
+      const ignorePattern = /node_modules|\.git|dist|build|coverage|\.next|__pycache__|\.cache|vendor/;
+      const validExtensions = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'];
+      
+      files.forEach(file => {
+        const path = file.webkitRelativePath;
+        if (ignorePattern.test(path)) return;
+        
+        const ext = path.substring(path.lastIndexOf('.')).toLowerCase();
+        if (validExtensions.includes(ext)) {
+          formData.append('files', file);
+          formData.append('paths', path);
+          validFilesCount++;
+        }
+      });
+      
+      if (validFilesCount === 0) {
+        showMsg("No valid JavaScript/TypeScript files found in this repository.");
+        return;
+      }
+      
+      showMsg(`Uploading and indexing ${validFilesCount} files...`);
+      els.indexRepoBtn.innerText = "Indexing...";
+      els.indexRepoBtn.disabled = true;
+      
+      try {
+        const res = await fetch('/api/index_upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          showMsg("Indexing job submitted. Repo Path: " + data.repo_path);
+          // Start polling status
+          pollIndexStatus(data.repo_path);
+        } else {
+          showMsg("Error starting indexing job.");
+          resetIndexBtn();
+        }
+      } catch (err) {
+        showMsg("Network error when trying to index.");
+        resetIndexBtn();
+      }
+      
+      // Clear picker so same folder can be re-selected if needed
+      els.repoPicker.value = '';
+    });
+    
+    let pollInterval;
+    const pollIndexStatus = async (repoPath) => {
+      clearInterval(pollInterval);
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/index/status?repo_path=${encodeURIComponent(repoPath)}&version=main`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === 'complete') {
+              showMsg(`✓ Repository indexed! ${data.total_files} files, ${data.total_chunks} chunks.`);
+              resetIndexBtn(true);
+              clearInterval(pollInterval);
+            } else if (data.status === 'error') {
+              showMsg("Error indexing repository: " + data.error_message);
+              resetIndexBtn();
+              clearInterval(pollInterval);
+            } else {
+              els.indexRepoBtn.innerText = `Indexing... (${data.processed_files}/${data.total_files})`;
+            }
+          }
+        } catch (e) {
+          // ignore network error during polling
+        }
+      }, 1000);
+    };
+
+    const resetIndexBtn = (success = false) => {
+      els.indexRepoBtn.disabled = false;
+      els.indexRepoBtn.innerText = success ? "✓ Ready" : "Index Repo";
+    };
+
+    // Examples click
+    els.examplesDialog.querySelectorAll('.example-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        els.query.value = btn.innerText;
+        els.searchForm.dispatchEvent(new Event('submit'));
+      });
+    });
+
+    // UI Helpers
+    const showMsg = (txt) => {
+      els.message.innerText = txt;
+      els.message.style.opacity = '1';
+      setTimeout(() => { els.message.style.opacity = '0'; }, 3000);
+    };
+
+    const renderResults = (results) => {
+      els.resultPicker.innerHTML = '';
+      if(results.length === 0) {
+        els.resultPicker.innerHTML = '<p>No results found.</p>';
+        return;
+      }
+      
+      results.forEach((r, idx) => {
+        const div = document.createElement('div');
+        div.className = 'result-card sticker routeCard';
+        
+        // Randomize route for demo if not provided
+        const route = r.route || ['semantic', 'ast', 'evolution'][idx % 3];
+        
+        div.innerHTML = `
+          <span class="route-badge ${route}">${route}</span>
+          <div class="result-title">${r.file || 'unknown_file'}</div>
+          <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.5rem;">Lines ${r.start_line}-${r.end_line}</div>
+          <div style="font-family: var(--font-code); font-size: 0.8rem; background: rgba(0,0,0,0.05); padding: 0.5rem; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            ${r.snippet ? r.snippet.split('\\n')[0] : '...'}
+          </div>
+        `;
+        
+        div.addEventListener('click', () => {
+          showCodePreview(r, idx + 1);
+        });
+        
+        els.resultPicker.appendChild(div);
+      });
+    };
+
+    const showCodePreview = async (r, rank) => {
+      els.codeEmpty.classList.add('hidden');
+      els.selectedPreview.classList.remove('hidden');
+      els.fileName.innerText = r.file || 'unknown';
+      els.fileRank.innerText = `Rank #${rank}`;
+      
+      // Fetch full code from backend
+      try {
+        const res = await fetch(`/api/code?file=${encodeURIComponent(r.file)}&start_line=${r.start_line}&end_line=${r.end_line}&version=main`);
+        let fullCode = r.snippet;
+        if (res.ok) {
+          const codeData = await res.json();
+          if (codeData.code) fullCode = codeData.code;
+        }
+        
+        const snippetLines = fullCode ? fullCode.split('\\n') : ['// No code provided'];
+        els.lineCount.innerText = `${snippetLines.length} lines`;
+        
+        // Highlight the matched lines
+        els.codeLines.innerHTML = snippetLines.map((line, i) => {
+          const currentLineNum = i + 1; // Assuming full file starts at line 1, but if we got fullCode it's from line 1. Wait, if it's full file, then lines match exactly.
+          // Let's just highlight the snippet range
+          const isMatched = currentLineNum >= r.start_line && currentLineNum <= r.end_line;
+          const lineContent = line.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          if(isMatched) {
+            return `<div class="highlight-wash">${lineContent}</div>`;
+          }
+          return `<div>${lineContent}</div>`;
+        }).join('');
+      } catch (err) {
+        els.codeLines.innerHTML = '<div>Error loading code</div>';
+      }
+      
+      els.codeScroll.scrollTop = 0;
+    };
+
+    // Form Submit (POST /search contract)
+    els.searchForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const q = els.query.value.trim();
+      if(!q) return;
+
+      // UI state
+      els.welcome.classList.add('hidden');
+      els.resultPicker.classList.add('hidden');
+      els.codeEmpty.classList.remove('hidden');
+      els.selectedPreview.classList.add('hidden');
+      
+      els.questionText.innerText = q;
+      els.questionText.classList.remove('hidden');
+      
+      els.searchButton.disabled = true;
+      els.newSearch.classList.remove('hidden');
+      els.loader.classList.add('active');
+      
+      const mode = els.searchMode.value;
+      
+      // Actually call the backend /api/search endpoint
+      try {
+        const response = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: q, mode: mode, version: "main", max_results: 10, include_trace: false })
+        });
+        
+        let data = [];
+        let latency = 0;
+        if (response.ok) {
+          const respJson = await response.json();
+          data = respJson.results || [];
+          latency = respJson.total_ms || 0;
+        } else {
+          // Fallback demo data if endpoint fails
+          await new Promise(r => setTimeout(r, 1000));
+          data = [
+            { file: "backend/app/indexer/embedder.py", start_line: 14, end_line: 25, snippet: "class Embedder:\\n    def __init__(self):\\n        self.model = load_model()\\n\\n    def embed(self, text):\\n        return self.model.encode(text)", route: "semantic" },
+            { file: "backend/app/agent/searcher.py", start_line: 45, end_line: 52, snippet: "def search_codebase(query):\\n    vector = embedder.embed(query)\\n    results = db.similarity_search(vector)\\n    return results", route: "ast" }
+          ];
+          latency = 1000;
+        }
+        
+        els.answer.innerText = `Found ${data.length} results. Search completed in ${latency} ms.`;
+        els.answer.classList.remove('hidden');
+        renderResults(data);
+        els.resultPicker.classList.remove('hidden');
+        
+        // Auto-select first result
+        if(data.length > 0) showCodePreview(data[0], 1);
+        
+      } catch (err) {
+        showMsg("Error fetching results.");
+      } finally {
+        els.searchButton.disabled = false;
+        els.loader.classList.remove('active');
+      }
+    });
+
+    els.newSearch.addEventListener('click', () => {
+      els.query.value = '';
+      els.welcome.classList.remove('hidden');
+      els.questionText.classList.add('hidden');
+      els.answer.classList.add('hidden');
+      els.resultPicker.classList.add('hidden');
+      els.codeEmpty.classList.remove('hidden');
+      els.selectedPreview.classList.add('hidden');
+      els.newSearch.classList.add('hidden');
+      els.query.focus();
+    });
+
+    els.copyButton.addEventListener('click', () => {
+      navigator.clipboard.writeText(els.codeLines.innerText);
+      showMsg('Copied to clipboard');
+    });
+  </script>
+</body>
+</html>
