@@ -395,3 +395,5 @@ Command: `python scripts/cpu_check.py --config <cfg> --threads 4` (200 random co
 - Side by side at k=50: Qwen3 + Stage 2 **0.91274** / 0.89804 vs fusion + Stage 2 **0.95646** / 0.94501.
 - **Primary submission (per P's 09:40 rule, the one test-based choice): fusion + Stage 2 k=50, `results/appsretrieval_results_B_fusion_k50.json`.** Encoder-only submission: fusion Output A, `results/appsretrieval_results_A_fusion.json` (0.8702).
 - All test runs: G1 e5 0.11532; G1 gte 0.57738; Qwen3 zero-shot 0.74641; Qwen3 Output A 0.74641; Qwen3 + S2 k=20 0.8938; Qwen3 + S2 k=50 0.91274; fusion Output A 0.8702; fusion + S2 k=50 0.95646; fusion + S2 k=20 0.95199 (ablation).
+
+## 2026-09-30 deadline confirmed by P: **30 Sep 21:30** (submission).
