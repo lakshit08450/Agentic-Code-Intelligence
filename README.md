@@ -32,19 +32,24 @@ solution  ──► Qwen3-Embedding-0.6B ──┘                      run each
 
 ## 2. Results
 
-### Screening: MTEB AppsRetrieval, test split (3,765 queries)
-| Output | Model | NDCG@10 | MRR@10 | File |
-|---|---|---|---|---|
-| A | Qwen3-Embedding-0.6B (encoder only) | 0.74641 | 0.70044 | `results/appsretrieval_results_A.json` |
-| B (k=20) | + execution re-ranking | 0.8938 | 0.8812 | `results/appsretrieval_results_B.json` |
-| B (k=50, pre-declared final) | + execution re-ranking | 0.91274 | 0.89804 | `results/appsretrieval_results_B_k50.json` |
-| A (fusion Qwen3 + EmbeddingGemma, w=0.3; disclosed, not submitted) | encoder only | 0.8702 | 0.8400 | `results/appsretrieval_results_A_fusion.json` |
+### Screening: MTEB AppsRetrieval, test split (3,765 queries). All test runs.
+| # | Pipeline | Stage 1 | Stage 2 | NDCG@10 | MRR@10 | Role | File |
+|---|---|---|---|---|---|---|---|
+| 1 | Qwen3 encoder only | Qwen3-Embedding-0.6B | none | 0.74641 | 0.70044 | | `results/appsretrieval_results_A.json` |
+| 2 | Qwen3 + Stage 2, k=20 | Qwen3 | frozen weights, k=20 | 0.8938 | 0.8812 | | `results/appsretrieval_results_B.json` |
+| 3 | Qwen3 + Stage 2, k=50 | Qwen3 | frozen weights, k=50 | 0.91274 | 0.89804 | primary candidate | `results/appsretrieval_results_B_k50.json` |
+| 4 | Fusion encoder only | Qwen3 (0.3) + EmbeddingGemma-300m (0.7) | none | 0.8702 | 0.8400 | **encoder-only submission** | `results/appsretrieval_results_A_fusion.json` |
+| 5 | Fusion + Stage 2, k=50 | fusion (0.3 / 0.7) | frozen weights, k=50 | [pending] | [pending] | primary candidate | `results/appsretrieval_results_B_fusion_k50.json` |
+| 6 | Fusion + Stage 2, k=20 | fusion (0.3 / 0.7) | frozen weights, k=20 | [pending] | [pending] | ablation only, not eligible | `results/appsretrieval_results_B_fusion_k20.json` |
 
-Harness check (G1), same pipeline: e5-base-v2 0.11532 (published 0.115), gte-modernbert-base 0.57738
-(published 0.564). Files `results/g1_e5_base_v2.json`, `results/test_qwen3_zeroshot.json`.
+**Primary submission** = the higher test NDCG@10 of runs 3 and 5 (decided by P on 30 Sep; the only choice
+made on test data, disclosed in `docs/LOG.md`). The pre-declared validation rule for fusion + Stage 2
+had narrowly failed (k=50 paired CI [-0.003, +0.050]). Everything else (models, preprocessing, fusion
+weight, Stage 2 weights and depth) was chosen on validation.
 
-Test runs made, all pre-declared in `docs/LOG.md`: G1 e5, G1 gte (Output A v0), Qwen3 zero-shot (model
-choice), Output A + Output B k=20, Output B k=50. Nothing was tuned on test.
+Other test runs, all logged: harness check (G1) e5-base-v2 0.11532 (published 0.115) and gte-modernbert-base
+0.57738 (published 0.564); Qwen3 zero-shot 0.74641 (model choice; identical to run 1). Files
+`results/g1_e5_base_v2.json`, `results/test_qwen3_zeroshot.json`.
 
 ### Validation (APPS train split, seed 13, 1,000 queries; used for every choice)
 Stage 1 bake-off (`results/bakeoff.csv`):
@@ -133,12 +138,15 @@ competitive-programming solutions, not for malware. `tests/test_sandbox.py` exer
 | Model | License | Stated training data |
 |---|---|---|
 | Qwen/Qwen3-Embedding-0.6B (rev 97b0c614) | Apache-2.0 | mteb registry: 11 sets incl. CodeSearchNet, MSMARCO, NQ, HotpotQA, FEVER; APPS/CoIR not listed |
+| google/embeddinggemma-300m (rev 57c266a7; fusion) | Gemma Terms of Use | ~320B tokens of web text, code and technical documents (model card); APPS/CoIR not listed |
 | Alibaba-NLP/gte-modernbert-base (bake-off) | Apache-2.0 | mGTE recipe; APPS/CoIR not listed |
 | nomic-ai/CodeRankEmbed (bake-off) | MIT | CoRNStack (GitHub); APPS/CoIR not listed |
 Dataset: CoIR-Retrieval/apps (MIT), revision f22508f9, as pinned by MTEB.
 
-**No test data was used for selection.** All choices (model, preprocessing, Stage 2 weights and depth)
-were made on the validation split carved from APPS train (seed 13). Test qrels were only read inside
+**Test data was used for exactly one choice**: the primary submission is the higher of two pre-specified
+k=50 pipelines (Qwen3 or fusion Stage 1, same frozen Stage 2) by test NDCG@10 (disclosed in `docs/LOG.md`).
+All other choices (models, preprocessing, fusion weight, Stage 2 weights and depth) were made on the
+validation split carved from APPS train (seed 13). Test qrels were only read inside
 `mteb.evaluate`. Scoring never reads IDs or metadata (`tests/test_no_id_leak.py`).
 Development encodes used an RTX 5060 GPU (fp16); the submitted pipeline defaults to CPU. A CPU
 equivalence spot-check is [pending].

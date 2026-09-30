@@ -16,8 +16,11 @@ Numbers come only from `results/`; `[pending]` = run in progress.
    coverage), comparator, five-layer Windows sandbox, 33 hostile-program tests (fork/child processes,
    network, file writes/deletes, memory bombs, 100 MB output, ctypes). Two refinements: any-answer
    problems, trivial outputs.
-7. **Results**: Output A 0.7464 / MRR 0.7004; Output B k=20 [pending]; Output B k=50 (final) [pending].
-   Validation side by side (Stage 1 0.783 -> Stage 2 0.922 / 0.944, weighted to the test mix).
+7. **Results (test, all runs)**: Qwen3 encoder 0.7464 / MRR 0.7004; Qwen3 + Stage 2 k=20 0.8938 / 0.8812;
+   Qwen3 + Stage 2 k=50 0.9127 / 0.8980; fusion (Qwen3 0.3 + EmbeddingGemma 0.7) encoder 0.8702 / 0.8400
+   (encoder-only submission); fusion + Stage 2 k=50 [pending]; fusion + Stage 2 k=20 [pending, ablation].
+   Primary = higher of the two k=50 runs (the one test-based choice, disclosed). Validation side by side
+   (stdin subset, test-mix weighted): Stage 1 0.783 -> Stage 2 k=20 0.922 / k=50 0.944; fusion + Stage 2 k=50 0.965.
 8. **Where the ceiling is (G2) and error analysis**: test loss buckets (rank 1: 60.5%, 2-10: 28.5%,
    11-20: 4.5%, 21-100: 4.9%); gold solutions pass their own samples in 82% (Codeforces) / 80% (AtCoder)
    of validation cases; failure causes (several valid answers, label noise, Python 2, no samples);
