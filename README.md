@@ -120,7 +120,18 @@ embedding cache the Stage 1 test run takes ~30 s. Output B at k=50 on test took 
 ```
 Store: `index.sqlite` (versions, units, revisions with [v_from, v_to], embeddings, snippets) plus
 `vectors.npy`. Files over 300 lines are split into 80-line windows (20 overlap) and collapsed back to
-files in results. P1/Bonus metrics (incremental vs full rebuild time, embeddings reused, CPU latency): [pending].
+files in results. P1/Bonus metrics (`results/versioning_*.json`; **scaled-down** simulation: 1,000 units = gold solutions of 200
+validation queries + 800 train-split distractors, 5 versions with whitespace/comment edits, renames, constant
+edits, additions and deletions; CPU fp32):
+| | fusion (submission) | Qwen3 only |
+|---|---|---|
+| single version: NDCG@10 / MRR@10 | 0.960 / 0.947 | 0.937 / 0.920 |
+| all versions, no collapse | 0.951 / 0.939 | 0.926 / 0.910 |
+| all versions, collapsed per unit (`--range`) | 0.958 / 0.946 | 0.938 / 0.921 |
+| incremental update per version | 91-217 s | 37-166 s |
+| full rebuild | 506 s | 499 s |
+| embeddings reused per update | ~79.5% | ~79.5% |
+On this repository's own git history (72 files, 4 commits) an update re-embeds 0-1 files (under 10 s).
 
 ## 6. Sandbox security model (native Windows)
 APPS solutions are untrusted code. They never run in the main process or with the project's Python.

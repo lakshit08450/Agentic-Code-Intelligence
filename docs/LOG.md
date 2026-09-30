@@ -415,3 +415,16 @@ CPU fp32 vectors for the full 8,765-doc corpus + 200 validation queries (seed 13
 | fusion w=0.3 (submission) | 1,254 / 4,437 ms | 12,986 / 20,395 ms | 14,378 / 24,723 ms | 3.6 |
 | Qwen3 only | 838 / 2,908 ms | 12,393 / 18,133 ms | 14,641 / 19,558 ms | 3.9 |
 - Stage 2 dominates (Windows process start-up, ~0.56 s per python.exe launch). The integration app executes the top 20 instead of 50 for interactivity (docs/INTEGRATION.md).
+
+## 2026-09-30 Path B metrics (`scripts/simulate_versions.py` -> `results/versioning_*.json`; finished 20:09)
+SCALED DOWN for time: mini-corpus = gold solutions of 200 validation queries + 800 train-split distractors (1,000 units; plan: 1,000 + 1,500), 5 versions (per version: 10% whitespace/comment edits, 5% renames, 5% constant edits, +2% added, -2% deleted; gold never deleted). CPU fp32, empty embedding cache per store; query vectors from the CPU fp32 cache. First attempt stopped at 19:07 (models loaded up to 3x -> 1.8 GB free RAM); restarted 19:08 with one shared model copy.
+| | fusion w=0.3 | Qwen3 only |
+|---|---|---|
+| single version v4: NDCG@10 / MRR@10 | 0.9602 / 0.9470 | 0.9373 / 0.9201 |
+| all versions, no collapse | 0.9508 / 0.9394 | 0.9263 / 0.9103 |
+| all versions, collapse by unit | 0.9582 / 0.9459 | 0.9378 / 0.9206 |
+| incremental update v1..v4 (s) | 91.2, 217.0, 174.2, 95.5 | 37.0, 165.5, 133.1, 67.0 |
+| full rebuild of v4 (s) | 506.2 | 499.0 |
+| embeddings reused per incremental version | 79.2-79.7% (204-209 of ~1,006 embedded) | same |
+- Git demo (this repo, 4 commits, 72 .py files): first build embeds 80 pieces; later commits embed 0-1 (7 ms - 9.7 s per update).
+- Timings vary with background load (the machine also ran other jobs earlier in the window).

@@ -1,0 +1,179 @@
+{
+ "pipeline": "qwen3_only",
+ "config": "configs/stage1_final.yaml",
+ "units_v0": 1000,
+ "units_v4": 1000,
+ "single_version_v4": {
+  "ndcg_at_10": 0.937253224273598,
+  "mrr_at_10": 0.9201448412698412
+ },
+ "all_versions_no_collapse": {
+  "ndcg_at_10": 0.9263070508929456,
+  "mrr_at_10": 0.9103333333333333
+ },
+ "all_versions_collapse": {
+  "ndcg_at_10": 0.9377805280703797,
+  "mrr_at_10": 0.9205972222222222
+ },
+ "incremental_steps": [
+  {
+   "label": "v0",
+   "units": 1000,
+   "unchanged": 0,
+   "modified": 0,
+   "added": 1000,
+   "removed": 0,
+   "embedded": 1006,
+   "reused": 0,
+   "reused_share": 0.0,
+   "ms": {
+    "split": 4.241099988576025,
+    "embed": 336504.4348000083,
+    "index": 10.149099980480969,
+    "total": 336518.82499997737
+   }
+  },
+  {
+   "label": "v1",
+   "units": 1000,
+   "unchanged": 795,
+   "modified": 185,
+   "added": 20,
+   "removed": 20,
+   "embedded": 205,
+   "reused": 801,
+   "reused_share": 0.7962226640159046,
+   "ms": {
+    "split": 2.159699972253293,
+    "embed": 36982.081399997696,
+    "index": 14.498000033199787,
+    "total": 36998.73910000315
+   }
+  },
+  {
+   "label": "v2",
+   "units": 1000,
+   "unchanged": 792,
+   "modified": 188,
+   "added": 20,
+   "removed": 20,
+   "embedded": 208,
+   "reused": 798,
+   "reused_share": 0.7932405566600398,
+   "ms": {
+    "split": 2.378600009251386,
+    "embed": 165502.3469000007,
+    "index": 19.47140000993386,
+    "total": 165524.1969000199
+   }
+  },
+  {
+   "label": "v3",
+   "units": 1000,
+   "unchanged": 796,
+   "modified": 184,
+   "added": 20,
+   "removed": 20,
+   "embedded": 204,
+   "reused": 802,
+   "reused_share": 0.7972166998011928,
+   "ms": {
+    "split": 4.828500037547201,
+    "embed": 133115.04279996734,
+    "index": 23.603100038599223,
+    "total": 133143.4744000435
+   }
+  },
+  {
+   "label": "v4",
+   "units": 1000,
+   "unchanged": 795,
+   "modified": 185,
+   "added": 20,
+   "removed": 20,
+   "embedded": 209,
+   "reused": 797,
+   "reused_share": 0.7922465208747514,
+   "ms": {
+    "split": 2.8737999964505434,
+    "embed": 66979.82379997848,
+    "index": 26.059099996928126,
+    "total": 67008.75669997185
+   }
+  }
+ ],
+ "incremental_update_ms_v1_to_v4": [
+  36998.73910000315,
+  165524.1969000199,
+  133143.4744000435,
+  67008.75669997185
+ ],
+ "full_rebuild_v4_s": 499.0,
+ "full_rebuild_embedded": 1006,
+ "git_demo": [
+  {
+   "label": "985e4cd70d7af488bfa3dc362d29c6dc2dd88750",
+   "units": 72,
+   "unchanged": 0,
+   "modified": 0,
+   "added": 72,
+   "removed": 0,
+   "embedded": 80,
+   "reused": 0,
+   "ms": {
+    "split": 2.849399985279888,
+    "embed": 235932.4203999713,
+    "index": 5.247300025075674,
+    "total": 235940.51709998166
+   }
+  },
+  {
+   "label": "7693055bbc9d085beb046ab29d99404f12eb7327",
+   "units": 72,
+   "unchanged": 72,
+   "modified": 0,
+   "added": 0,
+   "removed": 0,
+   "embedded": 0,
+   "reused": 80,
+   "ms": {
+    "split": 3.4302000422030687,
+    "embed": 0.7738999556750059,
+    "index": 3.4696999937295914,
+    "total": 7.673799991607666
+   }
+  },
+  {
+   "label": "a20c3cb39708da27ccf78364ebe3324c52d4c635",
+   "units": 72,
+   "unchanged": 71,
+   "modified": 1,
+   "added": 0,
+   "removed": 0,
+   "embedded": 1,
+   "reused": 79,
+   "ms": {
+    "split": 0.7481000502593815,
+    "embed": 7071.963599999435,
+    "index": 3.9665999938733876,
+    "total": 7076.678300043568
+   }
+  },
+  {
+   "label": "8631d0850e6004a8183e07dcc7d85b5108800474",
+   "units": 72,
+   "unchanged": 72,
+   "modified": 0,
+   "added": 0,
+   "removed": 0,
+   "embedded": 0,
+   "reused": 80,
+   "ms": {
+    "split": 0.9166999952867627,
+    "embed": 0.791700033005327,
+    "index": 5.299200012814254,
+    "total": 7.007600041106343
+   }
+  }
+ ]
+}

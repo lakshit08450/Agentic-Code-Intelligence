@@ -1,0 +1,179 @@
+{
+ "pipeline": "fusion_w0.3",
+ "config": "configs/fusion/qwen3_gemma_w0.3.yaml",
+ "units_v0": 1000,
+ "units_v4": 1000,
+ "single_version_v4": {
+  "ndcg_at_10": 0.9601653026580845,
+  "mrr_at_10": 0.9469722222222222
+ },
+ "all_versions_no_collapse": {
+  "ndcg_at_10": 0.9507701611009876,
+  "mrr_at_10": 0.9394166666666667
+ },
+ "all_versions_collapse": {
+  "ndcg_at_10": 0.9581888437586471,
+  "mrr_at_10": 0.945922619047619
+ },
+ "incremental_steps": [
+  {
+   "label": "v0",
+   "units": 1000,
+   "unchanged": 0,
+   "modified": 0,
+   "added": 1000,
+   "removed": 0,
+   "embedded": 1006,
+   "reused": 0,
+   "reused_share": 0.0,
+   "ms": {
+    "split": 2.0878000068478286,
+    "embed": 670058.9003000059,
+    "index": 16.98199997190386,
+    "total": 670077.9700999847
+   }
+  },
+  {
+   "label": "v1",
+   "units": 1000,
+   "unchanged": 795,
+   "modified": 185,
+   "added": 20,
+   "removed": 20,
+   "embedded": 205,
+   "reused": 801,
+   "reused_share": 0.7962226640159046,
+   "ms": {
+    "split": 2.8223999543115497,
+    "embed": 91204.82680003624,
+    "index": 21.9173000077717,
+    "total": 91229.56649999833
+   }
+  },
+  {
+   "label": "v2",
+   "units": 1000,
+   "unchanged": 792,
+   "modified": 188,
+   "added": 20,
+   "removed": 20,
+   "embedded": 208,
+   "reused": 798,
+   "reused_share": 0.7932405566600398,
+   "ms": {
+    "split": 5.864500009920448,
+    "embed": 216937.66719999257,
+    "index": 25.503700016997755,
+    "total": 216969.0354000195
+   }
+  },
+  {
+   "label": "v3",
+   "units": 1000,
+   "unchanged": 796,
+   "modified": 184,
+   "added": 20,
+   "removed": 20,
+   "embedded": 204,
+   "reused": 802,
+   "reused_share": 0.7972166998011928,
+   "ms": {
+    "split": 2.7618000167421997,
+    "embed": 174152.87729998818,
+    "index": 22.166000038851053,
+    "total": 174177.80510004377
+   }
+  },
+  {
+   "label": "v4",
+   "units": 1000,
+   "unchanged": 795,
+   "modified": 185,
+   "added": 20,
+   "removed": 20,
+   "embedded": 209,
+   "reused": 797,
+   "reused_share": 0.7922465208747514,
+   "ms": {
+    "split": 2.9343999922275543,
+    "embed": 95452.73409999209,
+    "index": 24.342300021089613,
+    "total": 95480.0108000054
+   }
+  }
+ ],
+ "incremental_update_ms_v1_to_v4": [
+  91229.56649999833,
+  216969.0354000195,
+  174177.80510004377,
+  95480.0108000054
+ ],
+ "full_rebuild_v4_s": 506.18,
+ "full_rebuild_embedded": 1006,
+ "git_demo": [
+  {
+   "label": "985e4cd70d7af488bfa3dc362d29c6dc2dd88750",
+   "units": 72,
+   "unchanged": 0,
+   "modified": 0,
+   "added": 72,
+   "removed": 0,
+   "embedded": 80,
+   "reused": 0,
+   "ms": {
+    "split": 3.687000018544495,
+    "embed": 333989.4512000028,
+    "index": 4.862900008447468,
+    "total": 333998.0011000298
+   }
+  },
+  {
+   "label": "7693055bbc9d085beb046ab29d99404f12eb7327",
+   "units": 72,
+   "unchanged": 72,
+   "modified": 0,
+   "added": 0,
+   "removed": 0,
+   "embedded": 0,
+   "reused": 80,
+   "ms": {
+    "split": 0.8481999975629151,
+    "embed": 1.2597000459209085,
+    "index": 3.447999944910407,
+    "total": 5.555899988394231
+   }
+  },
+  {
+   "label": "a20c3cb39708da27ccf78364ebe3324c52d4c635",
+   "units": 72,
+   "unchanged": 71,
+   "modified": 1,
+   "added": 0,
+   "removed": 0,
+   "embedded": 1,
+   "reused": 79,
+   "ms": {
+    "split": 0.8018999942578375,
+    "embed": 9722.233499982394,
+    "index": 4.318699997384101,
+    "total": 9727.354099974036
+   }
+  },
+  {
+   "label": "8631d0850e6004a8183e07dcc7d85b5108800474",
+   "units": 72,
+   "unchanged": 72,
+   "modified": 0,
+   "added": 0,
+   "removed": 0,
+   "embedded": 0,
+   "reused": 80,
+   "ms": {
+    "split": 1.2174999574199319,
+    "embed": 1.7241000314243138,
+    "index": 3.882799996063113,
+    "total": 6.824399984907359
+   }
+  }
+ ]
+}
