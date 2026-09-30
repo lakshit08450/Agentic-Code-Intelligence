@@ -93,10 +93,16 @@ From the embedding cache (fast, CPU):
 .venv\Scripts\python -m codeintel.eval.run_two_stage --split test                         # Output A + Output B (k=20)
 .venv\Scripts\python -m codeintel.eval.run_two_stage --split test --reuse-a --stage2-config configs\stage2_final_k50.yaml --out-suffix _k50
 ```
-CPU runtimes on the dev machine (Ryzen 9 270, 8 cores): Stage 1 test run from cache ~25 s; full corpus +
-test query encode ~1 h 50 min; Stage 2 at about 3-4 program executions/s (process start-up dominates
-on this machine), so k=20 takes about 7 h and ranks 21-50 about 7-10 h more. Execution results are cached
-(`cache/exec/`), so reruns are fast.
+CPU runtimes on the dev machine (Ryzen 9 270, 8 cores, 15 GB RAM), measured (`results/latency_*.json`,
+20 validation queries, CPU fp32, Stage 2 = fresh executions of the top 50 with 12 workers):
+| pipeline | Stage 1 p50 / p95 | Stage 2 p50 / p95 | total p50 / p95 |
+|---|---|---|---|
+| fusion (submission) | 1.25 s / 4.4 s | 13.0 s / 20.4 s | 14.4 s / 24.7 s |
+| Qwen3 only | 0.84 s / 2.9 s | 12.4 s / 18.1 s | 14.6 s / 19.6 s |
+Stage 2 speed is bound by Windows process start-up (~0.56 s per python.exe launch; 3.6-3.9 executions/s).
+Full CPU encode of corpus + test queries: ~1 h 50 min for Qwen3 (plus ~1 h for EmbeddingGemma); from the
+embedding cache the Stage 1 test run takes ~30 s. Output B at k=50 on test took 5.4 h (Qwen3) and 4.0 h
+(fusion, reusing cached executions). Execution results are cached (`cache/exec/`), so reruns are fast.
 
 ## 5. Versioned retrieval (P1 and Bonus)
 ```powershell
