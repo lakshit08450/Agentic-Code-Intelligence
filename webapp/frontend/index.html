@@ -365,6 +365,12 @@
       background-color: rgba(255, 192, 97, 0.2);
     }
 
+    /* In the code viewer every line is its own block: inline-block lines inside white-space: pre
+       sat side by side on one row, hiding every line after the first. */
+    #codeLines > div, #codeLines .highlight-wash {
+      display: block;
+    }
+
     /* Welcome / Empty States */
     .empty-state {
       display: flex;
@@ -889,13 +895,25 @@ Output
       els.fileName.innerText = r.file || 'unknown';
       els.fileRank.innerText = `Rank #${rank}`;
 
+      // expand tabs to 4-column stops (per line)
+      const expandTabs = (t) => {
+        let out = '';
+        for (const ch of t) {
+          if (ch === '\t') out += ' '.repeat(4 - (out.length % 4));
+          else out += ch;
+        }
+        return out;
+      };
+      // \r\n and lone \r -> \n, then split into lines
+      const splitLines = (t) => String(t).replace(/\r\n?/g, '\n').split('\n');
+
       const numbered = (lineNum, content, hl) =>
-        `<div${hl ? ' class="highlight-wash"' : ''}><span style="opacity:0.5;display:inline-block;width:3.5em">${lineNum}</span>${escapeHtml(content)}</div>`;
+        `<div${hl ? ' class="highlight-wash"' : ''}><span style="opacity:0.5;display:inline-block;width:3.5em">${lineNum}</span>${escapeHtml(expandTabs(content))}</div>`;
       const rangeText = (s, e, total) => `Lines ${s}–${e}${total ? ' of ' + total : ''} · ${e - s + 1} lines`;
 
       if ((r.context || {}).source === 'prism') {
         // PRISM results carry their snippet (APPS: the whole program); number it from its start line
-        const lines = (r.snippet || '').split(/\r?\n/);
+        const lines = splitLines(r.snippet || '');
         const end = r.start_line + lines.length - 1;
         els.lineCount.innerText = rangeText(r.start_line, Math.max(end, r.end_line));
         els.codeLines.innerHTML = lines.map((line, i) => numbered(r.start_line + i, line, true)).join('');
@@ -911,7 +929,7 @@ Output
           if (codeData.code) fullCode = codeData.code;
         }
         if (fullCode) {
-          const fileLines = fullCode.split(/\r?\n/);
+          const fileLines = splitLines(fullCode);
           els.lineCount.innerText = rangeText(r.start_line, r.end_line, fileLines.length);
           els.codeLines.innerHTML = fileLines.map((line, i) =>
             numbered(i + 1, line, i + 1 >= r.start_line && i + 1 <= r.end_line)).join('');
