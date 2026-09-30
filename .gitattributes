@@ -1,0 +1,2 @@
+# demo statements must stay byte-exact (no line-ending conversion)
+docs/demo_queries/*.txt -text
