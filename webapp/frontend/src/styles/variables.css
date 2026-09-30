@@ -1,0 +1,100 @@
+/* ── Design Tokens ────────────────────────────────────
+   CodeLens — Warm cream palette with editorial feel
+   ──────────────────────────────────────────────────── */
+
+:root {
+  /* ── Colors ── */
+  --color-bg:           #FAF7F2;
+  --color-bg-elevated:  #FFFFFF;
+  --color-bg-subtle:    #F3EDE4;
+  --color-bg-hover:     #EDE6DB;
+  --color-bg-input:     #FFFFFF;
+
+  --color-text:         #2C2520;
+  --color-text-muted:   #8A7E72;
+  --color-text-faint:   #B5AA9E;
+
+  --color-accent:       #C47A3A;
+  --color-accent-hover: #B06A2E;
+  --color-accent-soft:  #F0DCC8;
+  --color-accent-faint: #F8F0E6;
+
+  --color-border:       #E8E0D6;
+  --color-border-strong:#D4C9BC;
+
+  --color-code-bg:      #F7F3ED;
+  --color-code-border:  #E8E0D6;
+
+  --color-success:      #5B8C5A;
+  --color-success-soft: #E8F5E8;
+  --color-warning:      #C4993A;
+  --color-warning-soft: #FFF8E6;
+  --color-error:        #C45A3A;
+  --color-error-soft:   #FFF0EC;
+
+  --color-rank:         #B8860B;
+  --color-rank-soft:    #FDF6E3;
+
+  /* ── Typography ── */
+  --font-serif:     "Source Serif 4", "Georgia", serif;
+  --font-sans:      "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono:      "JetBrains Mono", "Fira Code", "Consolas", monospace;
+
+  --text-xs:        clamp(0.65rem, 0.8vw, 0.75rem);
+  --text-sm:        clamp(0.75rem, 0.95vw, 0.85rem);
+  --text-base:      clamp(0.9rem, 1.2vw, 1.05rem);
+  --text-lg:        clamp(1.05rem, 1.4vw, 1.2rem);
+  --text-xl:        clamp(1.3rem, 1.8vw, 1.5rem);
+  --text-2xl:       clamp(1.6rem, 2.2vw, 1.9rem);
+  --text-3xl:       clamp(1.8rem, 3vw, 2.4rem);
+  --text-4xl:       clamp(2.2rem, 3.5vw, 3rem);
+
+  --leading-tight:  1.25;
+  --leading-normal: 1.6;
+  --leading-loose:  1.8;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide:  0.04em;
+
+  /* ── Spacing ── */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* ── Borders ── */
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-sm:   0 1px 2px rgba(44, 37, 32, 0.04);
+  --shadow-md:   0 2px 8px rgba(44, 37, 32, 0.06), 0 1px 3px rgba(44, 37, 32, 0.04);
+  --shadow-lg:   0 4px 16px rgba(44, 37, 32, 0.08), 0 2px 6px rgba(44, 37, 32, 0.04);
+  --shadow-xl:   0 8px 32px rgba(44, 37, 32, 0.10), 0 4px 12px rgba(44, 37, 32, 0.06);
+  --shadow-inner: inset 0 1px 3px rgba(44, 37, 32, 0.06);
+
+  /* ── Transitions ── */
+  --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:  cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+
+  /* ── Layout ── */
+  --max-width:    960px;
+  --max-width-lg: 1120px;
+  --header-height: 56px;
+}

@@ -1,0 +1,30 @@
+{
+  "description": "CodeLens evaluation dataset — sample queries with ground-truth relevant code locations",
+  "queries": [
+    {
+      "query": "How does the authentication middleware validate JWT tokens?",
+      "relevant": ["src/middleware/auth.js", "src/utils/jwt.js"],
+      "version": "main"
+    },
+    {
+      "query": "Find all async functions that handle HTTP requests",
+      "relevant": ["src/routes/api.js", "src/controllers/user.js"],
+      "version": "main"
+    },
+    {
+      "query": "Where is the database connection pool initialized?",
+      "relevant": ["src/db/connection.js", "src/config/database.js"],
+      "version": "main"
+    },
+    {
+      "query": "Show error handling middleware",
+      "relevant": ["src/middleware/errorHandler.js"],
+      "version": "main"
+    },
+    {
+      "query": "Find exported utility functions for string formatting",
+      "relevant": ["src/utils/format.js", "src/helpers/string.js"],
+      "version": "main"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../docker/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend-data:/app/data
+      # Mount a local repo for indexing (optional)
+      # - /path/to/your/repo:/repos/target:ro
+    environment:
+      - CODELENS_HOST=0.0.0.0
+      - CODELENS_PORT=8000
+      - CODELENS_CORS=http://localhost:80,http://localhost:5173
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend-data:
