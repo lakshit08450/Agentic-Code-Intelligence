@@ -1,3 +1,5 @@
+> **Superseded** by README.md and docs/LOG.md (final state 30 Sep). Kept for the record.
+
 # Morning report: night of 28/29 Sep
 
 **Status: I stopped early at about 01:55 because I hit my usage limit.** Steps 1–4 are done and committed. Step 5 (the call-based harness) is only half built. Step 6 got as far as its stdin part, which is still running in the background. Details and numbers are in `docs/LOG.md`.

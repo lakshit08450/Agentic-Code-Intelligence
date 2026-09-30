@@ -428,3 +428,10 @@ SCALED DOWN for time: mini-corpus = gold solutions of 200 validation queries + 8
 | embeddings reused per incremental version | 79.2-79.7% (204-209 of ~1,006 embedded) | same |
 - Git demo (this repo, 4 commits, 72 .py files): first build embeds 80 pieces; later commits embed 0-1 (7 ms - 9.7 s per update).
 - Timings vary with background load (the machine also ran other jobs earlier in the window).
+
+## 2026-09-30 final state (integration, fixes, documentation)
+- Submission files (to attach to the release on P's word): primary = `results/appsretrieval_results_B_fusion_k50.json` (fusion + Stage 2 k=50, test NDCG@10 0.95646, MRR@10 0.94501) as `appsretrieval_results.json`; encoder-only = `results/appsretrieval_results_A_fusion.json` (0.8702 / 0.8400) as `appsretrieval_results_encoder_only.json`.
+- Integration API (schema 1.0, frozen; additive `POST /embed` since 21:45): `docs/INTEGRATION.md`. Smoke test 21/21 PASS (21:47). CodeLens app (teammate's, subtree-merged under `webapp/` with history) talks to it over HTTP from its own venv; start guide and demo queries in `webapp/README.md`.
+- Fixes during integration: SQLite store/health thread safety (app server); CodeLens: `/api/query` alias, honest errors instead of fake demo data, PRISM-backed embedder (1,792-d) replacing random vectors, upload replaces previous index + clear endpoint, code viewer line splitting/CSS (lines hidden after line 1), byte-exact demo statement loaders. Measured app: load 34 s, 3.7 GB RAM, Stage 1 0.2-0.4 s, Stage 2 (top 20) ~5-14 s uncached.
+- Demo statements (validation split, byte-exact): `docs/demo_queries/q2013.txt q2264.txt q2192.txt q2075.txt q2272.txt`; all return the gold at #1 with Stage 2 PASS through the app; q2264 is the recommended on-camera query (Stage 1 rank 2 -> #1).
+- README, PPT outline (`docs/PPT_OUTLINE.md`), demo video notes (`docs/DEMO_VIDEO.md`, link pending) updated to the final numbers.
