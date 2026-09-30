@@ -371,3 +371,9 @@ Command: `python -m codeintel.eval.run_mteb --config configs/fusion/qwen3_gemma_
 - Disclosure: the fusion Output A test run (step 5, 0.8702) was made and is reported, but it is not a submission.
 ### Step 6 cost estimate (for the record; not started)
 Uncached fusion test pairs: k=50 75,601 (~4.2 h at the ~5 runs/s of the last test run), k=20 14,617.
+
+## 2026-09-30 09:40 P's decision: fusion k=50 test run; final selection on test (disclosed)
+Statement given by P (logged verbatim before the run):
+"All test runs are reported in one results table. Final selection between two pre-specified pipelines is made on the test score: Qwen3 + Stage 2 k=50 (NDCG@10 0.9127, done) vs Fusion (Qwen3 w=0.3 + EmbeddingGemma) + Stage 2 k=50 (frozen Stage 2 weights). The higher test NDCG@10 becomes the primary submission. This is the only choice made on test data; all other choices came from validation. The pre-declared validation rule for fusion had narrowly failed (CI [-0.003, +0.050]). Fusion encoder-only (0.8702) is the encoder-only submission."
+- Note: this supersedes, by P's explicit decision, hard rule R2 in CLAUDE.md ("selection uses the validation split") for this one choice, and the 03:17 pre-declaration ("k=50 Output B is final, regardless of any score comparison on test").
+- Run: `python -m codeintel.eval.run_two_stage --split test --reuse-a --pred-a results/predictions/stage1_fusion --stage2-config configs/stage2_final_k50_fusion.yaml --out-suffix _fusion_k50` (frozen Stage 2 weights, k=50; Stage 1 = `configs/fusion/qwen3_gemma_w0.3.yaml`). Output `results/appsretrieval_results_B_fusion_k50.json`. No Qwen3 result, prediction or cache entry is modified (the exec cache only gains new rows). Hard cutoff 15:00 via `scripts/stop_at.py` (clean `bg.py --stop`); if stopped, Qwen3 k=50 stays primary.

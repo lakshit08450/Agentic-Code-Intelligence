@@ -1,0 +1,9 @@
+# Fusion pipeline (P, 30 Sep 09:40): frozen Stage 2 weights and k=50 from stage2_final_k50.yaml; Stage 1 = fusion w=0.3. Do not edit.
+k: 50
+w_pass: 0.3
+w_wrong: 0.05
+w_err: 0.05
+trivial_pass_factor: 0.1
+multi_answer_neutral: true
+workers: 12
+stage1_config: configs/fusion/qwen3_gemma_w0.3.yaml

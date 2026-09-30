@@ -82,6 +82,7 @@ def main() -> None:
     ap.add_argument("--reuse-a", action="store_true",
                     help="skip Output A and re-rank its saved predictions (no second Stage 1 test pass)")
     ap.add_argument("--out-suffix", default="", help="e.g. _k50 -> appsretrieval_results_B_k50.json")
+    ap.add_argument("--pred-a", default=None, help="folder of saved Output A predictions (default: stage1_qwen3)")
     a = ap.parse_args()
     s2_path = a.stage2_config
     s2 = load_stage2_cfg(s2_path)
@@ -89,7 +90,9 @@ def main() -> None:
     if a.split == "test" and a.k is not None and a.k != s2.k:
         raise SystemExit(f"test run must use the frozen k from {s2_path}")
     tag = "" if a.split == "test" else "validation_"
-    pred = REPO_ROOT / "results" / "predictions" / f"{tag}stage1_qwen3"
+    pred = Path(a.pred_a) if a.pred_a else REPO_ROOT / "results" / "predictions" / f"{tag}stage1_qwen3"
+    if not pred.is_absolute():
+        pred = REPO_ROOT / pred
 
     if a.reuse_a:
         if not any(pred.glob("*_predictions.json")):
@@ -111,7 +114,7 @@ def main() -> None:
     rr = ExecutionReranker(s2_path)
     pred_b = REPO_ROOT / "results" / "predictions" / f"{tag}stage2_exec{a.out_suffix}"
     evaluate(rr, task_b, REPO_ROOT / "results" / f"{tag}appsretrieval_results_B{a.out_suffix}.json", pred_b,
-             {"output": "B", "config": s2_path, "stage1_config": S1, "k": k, "outcome_counts": rr.stats,
+             {"output": "B", "config": s2_path, "stage1_config": rr.cfg.stage1_config, "output_a_predictions": str(pred), "k": k, "outcome_counts": rr.stats,
               "reused_output_a_predictions": a.reuse_a})
     if a.split == "validation":
         check_against_tuning(pred_b, k)
